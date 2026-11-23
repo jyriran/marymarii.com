@@ -15,6 +15,7 @@
 <meta property="og:image" content="https://marymarii.com/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="fonts/fraunces-latin-full-normal.woff2" as="font" type="font/woff2" crossorigin>
+<script>document.documentElement.classList.add("js")</script>
 <style>
 @font-face { font-family: "Fraunces"; src: url(fonts/fraunces-latin-full-normal.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Figtree"; src: url(fonts/figtree-latin-400-normal.woff2) format("woff2"); font-weight: 400; font-display: swap; }
@@ -212,10 +213,67 @@ dialog img { width: 100%; height: auto; }
   .play .h-dots { opacity: .18; }
   .card, .btn { transition: none; }
 }
+/* ---------- scroll motion ---------- */
+.progress { position: fixed; inset: 0 0 auto 0; height: 4px; z-index: 60; transform-origin: 0 50%; transform: scaleX(var(--sp, 0));
+  background: repeating-linear-gradient(90deg, var(--red) 0 10px, transparent 10px 16px); pointer-events: none; }
+.topbar { position: sticky; top: 0; z-index: 50; transition: background-color .35s, box-shadow .35s, backdrop-filter .35s; }
+.topbar .nav { transition: padding .35s; }
+.topbar .logo img { transition: height .35s; }
+.topbar.scrolled { background: rgba(251,247,241,.82); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px); box-shadow: 0 1px 0 var(--grid); }
+.topbar.scrolled .nav { padding: 10px 0; }
+.topbar.scrolled .logo img { height: 40px; }
+
+.js .rv { opacity: 0; transform: translate3d(0, 34px, 0); filter: blur(6px);
+  transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1), filter .9s cubic-bezier(.2,.7,.2,1);
+  transition-delay: calc(var(--d, 0) * 85ms); }
+.js .rv.from-left { transform: translate3d(-40px, 0, 0); }
+.js .rv.from-right { transform: translate3d(40px, 0, 0); }
+.js .rv.pop { transform: scale(.86) rotate(-2deg); }
+.js .rv.in { opacity: 1; transform: none; filter: none; }
+
+/* headings rise word by word */
+.js .split .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; margin-bottom: -.08em; }
+.js .split .w > span { display: inline-block; transform: translate3d(0, 105%, 0); transition: transform .9s cubic-bezier(.2,.8,.2,1); transition-delay: calc(var(--i) * 55ms); }
+.js .split.in .w > span { transform: none; }
+
+/* hero intro on load */
+.js .intro > * { opacity: 0; transform: translate3d(0, 24px, 0); animation: introUp 1s cubic-bezier(.2,.8,.2,1) forwards; }
+.js .intro > *:nth-child(2) { animation-delay: .12s; } .js .intro > *:nth-child(3) { animation-delay: .26s; }
+.js .intro > *:nth-child(4) { animation-delay: .38s; } .js .intro > *:nth-child(5) { animation-delay: .5s; }
+.js .hero .stage { opacity: 0; animation: stageIn 1.2s .2s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes introUp { to { opacity: 1; transform: none; } }
+@keyframes stageIn { from { opacity: 0; transform: translate3d(0, 40px, 0) rotate(3deg) scale(.94); } to { opacity: 1; transform: none; } }
+.hero-par { will-change: transform; transform: translate3d(0, calc(var(--hy, 0) * 1px), 0) rotate(calc(var(--hr, 0) * 1deg)); }
+
+/* the dotted line between steps draws itself */
+.steps::before { transform-origin: 0 50%; transform: scaleX(var(--p, 1)); }
+.js .step .num { transition: transform .7s cubic-bezier(.3,1.6,.5,1); }
+.js .step.rv:not(.in) .num { transform: translateY(-50%) scale(0); }
+
+/* dark bundle panel grows as it scrolls in */
+.bundle { transform: scale(calc(.93 + .07 * var(--p, 1))); border-radius: calc(60px - 26px * var(--p, 1)); will-change: transform; }
+
+/* phone floats up and straightens */
+.phone { transform: translate3d(0, calc((1 - var(--p, 1)) * 70px), 0) rotate(calc((1 - var(--p, 1)) * -7deg)); }
+.phone .view img { transform: scale(calc(1.12 - .12 * var(--p, 1))); }
+.js .checks li { opacity: 0; transform: translate3d(24px, 0, 0); transition: opacity .7s, transform .7s cubic-bezier(.2,.8,.2,1); transition-delay: calc(var(--d, 0) * 90ms); }
+.js .checks.in li { opacity: 1; transform: none; }
+.js .checks li::before { transition: transform .5s cubic-bezier(.3,1.7,.5,1); transition-delay: calc(var(--d, 0) * 90ms + .25s); transform: scale(0); }
+.js .checks.in li::before { transform: scale(1); }
+
+.next .mark { transform: rotate(calc((1 - var(--p, 1)) * -180deg)) scale(calc(.6 + .4 * var(--p, 1))); }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress { display: none; }
+  .js .rv, .js .split .w > span, .js .intro > *, .js .hero .stage, .js .checks li, .js .checks li::before, .js .step .num { opacity: 1 !important; transform: none !important; filter: none !important; animation: none !important; transition: none !important; }
+  .steps::before, .bundle, .phone, .phone .view img, .next .mark, .hero-par { transform: none !important; }
+  .bundle { border-radius: 34px; }
+}
 </style>
 </head>
 <body>
-<header class="wrap nav">
+<div class="progress" aria-hidden="true"></div>
+<header class="topbar"><div class="wrap nav">
   <a class="logo" href="#top" aria-label="MaryMariiArt home"><img src="brand/lockup-ink.png" alt="MaryMarii" width="186" height="56"></a>
   <nav class="nav-links" aria-label="Main">
     <a href="#how">How it works</a>
@@ -224,11 +282,11 @@ dialog img { width: 100%; height: auto; }
     <a href="scan/index.html?s=penguin">Magic camera</a>
     <a class="btn small" data-shop href="https://marymariiart.etsy.com">Etsy shop ↗</a>
   </nav>
-</header>
+</div></header>
 
 <main id="top">
   <section class="wrap hero" aria-labelledby="hero-title">
-    <div>
+    <div class="intro hero-par" data-par="text">
       <p class="eyebrow">Printable activity sheets · ages 4–8</p>
       <h1 id="hero-title"><span class="n">1</span>Connect the dots. <span class="n">2</span>Color it in. <span class="n">3</span><em>Watch it come alive.</em></h1>
       <p class="lede">Dot-to-dot pages for kids, printed at home. When the picture is finished, a grown-up scans the QR code on the sheet and the drawing moves on the phone screen. It works in the phone's browser, so there's no app to install.</p>
@@ -239,7 +297,7 @@ dialog img { width: 100%; height: auto; }
       <div class="facts"><span>Instant PDF download</span><span>A4 and US Letter</span><span>Prints great in black &amp; white</span><span>No app or sign-up</span></div>
     </div>
 
-    <figure class="stage" style="margin:0">
+    <div class="hero-par" data-par="stage"><figure class="stage" style="margin:0">
       <div class="stage-top"><span class="status"><i></i><span id="stage-status">Penguin · 42 dots</span></span><button class="replay" id="replay" type="button">Play again ↻</button></div>
       <div id="hero-art" class="play">
 <svg class="hero-sheet" viewBox="0 0 1000 1100" role="img" aria-labelledby="hero-art-title"><title id="hero-art-title">A penguin dot-to-dot that connects its own dots, colors itself in and starts to dance</title>
@@ -334,7 +392,7 @@ dialog img { width: 100%; height: auto; }
 </g><g class="h-spark"><path d="M120.0,128.0 L130.6,155.4 L159.9,157.0 L137.1,175.6 L144.7,204.0 L120.0,188.0 L95.3,204.0 L102.9,175.6 L80.1,157.0 L109.4,155.4 Z"/><path d="M880.0,216.0 L888.2,238.7 L912.3,239.5 L893.3,254.3 L900.0,277.5 L880.0,264.0 L860.0,277.5 L866.7,254.3 L847.7,239.5 L871.8,238.7 Z"/><path d="M110.0,770.0 L117.6,789.5 L138.5,790.7 L122.4,804.0 L127.6,824.3 L110.0,813.0 L92.4,824.3 L97.6,804.0 L81.5,790.7 L102.4,789.5 Z"/><path d="M900.0,816.0 L911.2,844.6 L941.8,846.4 L918.1,865.9 L925.9,895.6 L900.0,879.0 L874.1,895.6 L881.9,865.9 L858.2,846.4 L888.8,844.6 Z"/></g></svg>
       </div>
       <figcaption class="stage-caption" aria-hidden="true"><span data-phase="0">1 · Connect</span><span data-phase="1">2 · Color</span><span data-phase="2">3 · Scan &amp; play</span></figcaption>
-    </figure>
+    </figure></div>
   </section>
 
   <section class="wrap section" id="how" aria-labelledby="how-title">
@@ -342,15 +400,15 @@ dialog img { width: 100%; height: auto; }
       <h2 id="how-title">Three steps, one happy kid</h2>
       <p class="lede">Each sheet has a little picture of what you're drawing, letter boxes for your child's name, and its own QR code. Every page is made for black-and-white printers.</p>
     </div>
-    <div class="steps">
-      <article class="step"><span class="num">1</span><h3>Connect the dots</h3><p>Start at 1 and follow the numbers. Easy sheets have 30 dots, the trickiest has 73, so there's always a next challenge.</p></article>
-      <article class="step"><span class="num">2</span><h3>Color it in</h3><p>Crayons, markers or pencils all work. The little colored picture on the page shows one way to do it.</p></article>
-      <article class="step"><span class="num">3</span><h3>Scan and watch</h3><p>Point the phone camera at the QR code, open the link, then aim it at the page. The picture starts to move.</p></article>
+    <div class="steps" data-p>
+      <article class="step rv" style="--d:0"><span class="num">1</span><h3>Connect the dots</h3><p>Start at 1 and follow the numbers. Easy sheets have 30 dots, the trickiest has 73, so there's always a next challenge.</p></article>
+      <article class="step rv" style="--d:1"><span class="num">2</span><h3>Color it in</h3><p>Crayons, markers or pencils all work. The little colored picture on the page shows one way to do it.</p></article>
+      <article class="step rv" style="--d:2"><span class="num">3</span><h3>Scan and watch</h3><p>Point the phone camera at the QR code, open the link, then aim it at the page. The picture starts to move.</p></article>
     </div>
   </section>
 
   <section class="wrap" id="bundle" aria-labelledby="bundle-title">
-    <div class="bundle">
+    <div class="bundle" data-p>
       <span class="chip" id="bundle-chip">Coming soon to Etsy</span>
       <h2 id="bundle-title">Christmas Dot to Dot</h2>
       <p class="lede" style="margin-top:14px">Fifteen festive sheets, ordered from easy to challenging. Tap a sheet to see the whole page.</p>
@@ -373,14 +431,14 @@ dialog img { width: 100%; height: auto; }
   <section class="wrap section" aria-labelledby="who-title">
     <div class="section-head"><h2 id="who-title">Made for rainy days, road trips and classrooms</h2></div>
     <div class="who">
-      <article><h3>Parents</h3><p>Print a page while dinner's cooking, or a whole stack for a long car ride. Print as many copies as you like for your own family.</p></article>
-      <article><h3>Grandparents</h3><p>A quiet activity to do together at the table, with a little surprise at the end when the picture comes alive.</p></article>
-      <article><h3>Teachers &amp; homeschoolers</h3><p>Counting practice up to 73, pencil control and a reward at the end. Message us on Etsy about using the sheets in a classroom.</p></article>
+      <article class="rv pop" style="--d:0"><h3>Parents</h3><p>Print a page while dinner's cooking, or a whole stack for a long car ride. Print as many copies as you like for your own family.</p></article>
+      <article class="rv pop" style="--d:1"><h3>Grandparents</h3><p>A quiet activity to do together at the table, with a little surprise at the end when the picture comes alive.</p></article>
+      <article class="rv pop" style="--d:2"><h3>Teachers &amp; homeschoolers</h3><p>Counting practice up to 73, pencil control and a reward at the end. Message us on Etsy about using the sheets in a classroom.</p></article>
     </div>
   </section>
 
   <section class="wrap section ar" aria-labelledby="ar-title">
-    <div class="phone" aria-hidden="true">
+    <div class="phone" aria-hidden="true" data-p>
       <span class="bar"></span>
       <div class="view"><img src="img/penguin-sm.jpg" alt=""><span class="frame"></span></div>
       <span class="tag">Point the camera at the page</span>
@@ -388,7 +446,7 @@ dialog img { width: 100%; height: auto; }
     <div>
       <h2 id="ar-title">Your child's own colors come alive</h2>
       <p class="lede" style="margin-top:16px">The magic camera reads the colors your child used and turns their drawing into a little dancing character. You can record it and send it to grandma. It opens as a web page, so there's nothing to download.</p>
-      <ul class="checks">
+      <ul class="checks rv-group">
         <li><div><b>No app</b><span>Scan the QR code with the normal camera on an iPhone or Android phone.</span></div></li>
         <li><div><b>No accounts or emails</b><span>The AR page doesn't ask for names, emails or logins, so it's fine for little ones.</span></div></li>
         <li><div><b>One code per sheet</b><span>Every picture has its own animation, matched to that drawing.</span></div></li>
@@ -414,7 +472,7 @@ dialog img { width: 100%; height: auto; }
   </section>
 
   <section class="wrap next" aria-labelledby="next-title">
-    <img class="mark" src="brand/mark-ink.png" alt="" width="78" height="78" loading="lazy">
+    <img class="mark" data-p src="brand/mark-ink.png" alt="" width="78" height="78" loading="lazy">
     <h2 id="next-title">More bundles on the way</h2>
     <p>Each bundle has 15 sheets on one theme. Favorite the shop on Etsy to see new ones first.</p>
     <a class="btn primary" data-shop href="https://marymariiart.etsy.com">Favorite MaryMariiArt on Etsy ↗</a>
@@ -476,6 +534,7 @@ render(0);
 document.querySelectorAll(".filters button").forEach(btn => btn.addEventListener("click", () => {
   document.querySelectorAll(".filters button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
   render(Number(btn.dataset.level));
+  if (window.__watchCards) window.__watchCards();
 }));
 
 const lb = document.getElementById("lb"), lbImg = document.getElementById("lb-img"), lbTitle = document.getElementById("lb-title");
@@ -509,6 +568,67 @@ function play() {
 }
 document.getElementById("replay").addEventListener("click", play);
 play();
+
+/* ---------- scroll motion ---------- */
+(() => {
+  const root = document.documentElement;
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const topbar = document.querySelector(".topbar"), bar = document.querySelector(".progress");
+
+  // headings: split into words that rise in
+  document.querySelectorAll("main h2").forEach(h => {
+    if (still) return;
+    const words = h.textContent.trim().split(/\s+/);
+    h.setAttribute("aria-label", h.textContent.trim());
+    h.innerHTML = words.map((w, i) => `<span class="w" aria-hidden="true"><span style="--i:${i}">${w.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</span></span>`).join(" ");
+    h.classList.add("split");
+  });
+  // extra reveal targets
+  document.querySelectorAll(".section-head .lede, #bundle .lede, .bundle-meta, .filters, .bundle-cta, .faq details, .ar .lede, .ar .btn, .next p, .next .btn")
+    .forEach((el, i) => { el.classList.add("rv"); });
+  document.querySelectorAll(".faq details").forEach((el, i) => el.style.setProperty("--d", i % 8));
+  document.querySelectorAll(".checks li").forEach((el, i) => el.style.setProperty("--d", i));
+
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target; el.classList.add("in"); io.unobserve(el);
+    // hand the element back to its own hover transitions once it has arrived
+    if (el.classList.contains("card")) el.addEventListener("transitionend", () => { el.classList.remove("rv", "in"); el.style.removeProperty("--d"); }, { once: true });
+  }), { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
+  const watch = sel => document.querySelectorAll(sel).forEach(el => still ? el.classList.add("in") : io.observe(el));
+  watch(".rv, .split, .rv-group");
+  window.__watchCards = () => document.querySelectorAll("#grid .card").forEach((c, i) => {
+    if (still) return; c.classList.add("rv", "pop"); c.style.setProperty("--d", i % 5); io.observe(c);
+  });
+  window.__watchCards();
+
+  // scroll-linked values
+  const linked = [...document.querySelectorAll("[data-p]")];
+  const par = [...document.querySelectorAll("[data-par]")];
+  let ticking = false;
+  function frame() {
+    ticking = false;
+    const y = scrollY, vh = innerHeight, max = root.scrollHeight - vh;
+    topbar.classList.toggle("scrolled", y > 12);
+    if (still) return;
+    if (y >= max - 4) document.querySelectorAll(".rv:not(.in), .split:not(.in), .rv-group:not(.in)").forEach(el => el.classList.add("in"));
+    bar.style.setProperty("--sp", max > 0 ? (y / max).toFixed(4) : 0);
+    for (const el of linked) {
+      const r = el.getBoundingClientRect();
+      // 0 when the top is at the bottom of the screen, 1 once it reaches 40% from the top
+      const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.6)));
+      el.style.setProperty("--p", (1 - Math.pow(1 - p, 3)).toFixed(4));
+    }
+    if (y < vh * 1.5) for (const el of par) {
+      const k = el.dataset.par === "stage" ? 0.14 : 0.06;
+      el.style.setProperty("--hy", (y * k).toFixed(1));
+      el.style.setProperty("--hr", el.dataset.par === "stage" ? (y * 0.004).toFixed(3) : 0);
+    }
+  }
+  addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }, { passive: true });
+  addEventListener("resize", frame);
+  frame();
+})();
 </script>
 </body>
 </html>
