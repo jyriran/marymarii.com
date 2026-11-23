@@ -157,7 +157,10 @@ function buildCharacter() {
       }`,
     transparent: true, depthTest: false, depthWrite: false,
   });
-  const pg = new THREE.ShapeGeometry(sil.map(poly => new THREE.Shape(poly.map(([x, y]) => toLocal(x, y)))));
+  // grow the patch a little around each outline so hand shake never lets the printed drawing peek out
+  const grow = poly => { const cx = poly.reduce((a, p) => a + p[0], 0) / poly.length, cy = poly.reduce((a, p) => a + p[1], 0) / poly.length;
+    return poly.map(([x, y]) => { const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1, k = (d + 14) / d; return [cx + dx * k, cy + dy * k]; }); };
+  const pg = new THREE.ShapeGeometry(sil.map(poly => new THREE.Shape(grow(poly).map(([x, y]) => toLocal(x, y)))));
   patch = new THREE.Mesh(pg, patchMat);
   patch.position.z = 0.0005; patch.renderOrder = 1;
   anchor.add(patch);
