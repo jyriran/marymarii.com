@@ -80,6 +80,7 @@ button { font: inherit; cursor: pointer; }
 .result video { width: 100%; max-height: 52vh; border-radius: 18px; background: #000; display: block; margin-bottom: 14px; object-fit: contain; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .row .big, .row .ghost { margin-top: 0; }
+#save { grid-column: 1 / -1; }
 .err { color: var(--red) !important; font-weight: 700; }
 input[type=file] { display: none; }
 @media (prefers-reduced-motion: reduce) { .frame { animation: none; } }
@@ -116,7 +117,7 @@ input[type=file] { display: none; }
 <section class="sheet result" id="result" hidden>
   <div class="card">
     <video id="clip" playsinline controls loop></video>
-    <div class="row"><button class="big" id="share" type="button">Save / Share</button><button class="ghost" id="retake" type="button">Record again</button></div>
+    <div class="row"><button class="big" id="save" type="button">Save video</button><button class="ghost" id="share" type="button">Share</button><button class="ghost" id="retake" type="button">Record again</button></div>
     <p id="save-note" style="margin:12px 0 0;font-size:.85rem" hidden></p>
   </div>
 </section>

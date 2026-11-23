@@ -655,16 +655,41 @@ $('rec').addEventListener('click', () => {
   }, 100);
 });
 $('retake').addEventListener('click', () => { $('result').hidden = true; });
-$('share').addEventListener('click', async () => {
-  if (!clipBlob) return;
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function clipFile() {
   const ext = clipBlob.type.includes('mp4') ? 'mp4' : 'webm';
-  const file = new File([clipBlob], `my-${sheetKey}-came-alive.${ext}`, { type: clipBlob.type });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: `My ${SHEET.name.toLowerCase()} came alive!` }); return; } catch (e) { if (e.name === 'AbortError') return; }
-  }
+  return new File([clipBlob], `my-${sheetKey}-came-alive.${ext}`, { type: clipBlob.type });
+}
+function note(t) { const n = $('save-note'); n.hidden = false; n.textContent = t; }
+function download(file) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(clipBlob); a.download = file.name;
   document.body.appendChild(a); a.click(); a.remove();
-  const n = $('save-note'); n.hidden = false; n.textContent = 'Saved to your downloads.';
+}
+async function shareFile(file) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: `My ${SHEET.name.toLowerCase()} came alive!` }); return 'shared'; }
+    catch (e) { return e.name === 'AbortError' ? 'cancelled' : 'failed'; }
+  }
+  return 'unsupported';
+}
+$('save').addEventListener('click', async () => {
+  if (!clipBlob) return;
+  const file = clipFile();
+  if (isIOS) {
+    // On iPhone the only way into the Photos app is the share sheet's "Save Video" action.
+    note('Tap “Save Video” in the menu (scroll down if you don’t see it). It goes to your Photos.');
+    const r = await shareFile(file);
+    if (r === 'unsupported' || r === 'failed') { download(file); note('Saved to Files › Downloads. Open it there and tap Share › Save Video to add it to Photos.'); }
+    return;
+  }
+  download(file);
+  note('Saved to your phone’s Downloads. It also shows up in your Gallery or Photos app.');
+});
+$('share').addEventListener('click', async () => {
+  if (!clipBlob) return;
+  const file = clipFile();
+  const r = await shareFile(file);
+  if (r === 'unsupported' || r === 'failed') { download(file); note('Sharing isn’t available here, so the video was saved to your downloads instead.'); }
 });
 
 /* ---------- test hook (used by automated checks; harmless in production) ---------- */
