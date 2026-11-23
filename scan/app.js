@@ -99,6 +99,7 @@ function extract() {
 
 /* ---------- the character, built from the extracted texture ---------- */
 const root = new THREE.Group(), bodyG = new THREE.Group();
+const toon = new THREE.Group(); toon.matrixAutoUpdate = false; // squash, stretch, lean and hop live here
 const pivots = {};
 let shadow = null, patch = null, patchMat = null, lids = [], snow = null, smoke = null, B = null, BP = null;
 const rigParts = [];
@@ -137,7 +138,7 @@ function buildCharacter() {
   BP = data.bodyPivot ? toLocal(...data.bodyPivot) : B.clone(); // body pivot (the top for swinging bells and stockings)
   root.position.set(B.x, B.y, 0.002);
   anchor.add(root);
-  root.add(bodyG);
+  root.add(toon); toon.add(bodyG);
   bodyG.position.set(BP.x - B.x, BP.y - B.y, 0); bodyG.userData.base = bodyG.position.clone();
 
   // paper patch: covers the drawing on the page once it has jumped off
@@ -172,7 +173,7 @@ function buildCharacter() {
     const o = toLocal(...p.pivot), parentOrigin = p.parent === 'root' ? B : BP;
     const piv = new THREE.Group(); piv.position.set(o.x - parentOrigin.x, o.y - parentOrigin.y, 0); piv.userData = { base: piv.position.clone(), motion: p.motion };
     piv.add(partMesh(p.polys, o, p.order));
-    (p.parent === 'root' ? root : bodyG).add(piv); rigParts.push(piv);
+    (p.parent === 'root' ? toon : bodyG).add(piv); piv.userData.a = 0; piv.userData.va = 0; rigParts.push(piv);
   }
   // eyelids take their color from the child's coloring next to each eye
   data.eyes.forEach(([x, y, r], i) => {
@@ -311,6 +312,7 @@ function sampleRot(g, w, h, rot, c, r) {
   const xi = Math.round(x), yi = Math.round(y);
   return (xi < 0 || yi < 0 || xi >= w || yi >= h) ? 1 : g[yi * w + xi];
 }
+let stripDim = false; const DIM_PAPER = Number(new URLSearchParams(location.search).get('dim')) || 0.9;
 function grabName() {
   mvp.copy(P).multiply(anchorM);
   renderer.setRenderTarget(nameRT); renderer.clear(); renderer.render(nameScene, orthoCam); renderer.setRenderTarget(null);
@@ -320,6 +322,11 @@ function grabName() {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = ((h - 1 - y) * w + x) * 4; g[y * w + x] = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) / 255;
   }
+  // stretch to the paper's own white and the ink's black, so dim or warm lamp light reads like daylight
+  const smp = []; for (let i = 0; i < g.length; i += 7) smp.push(g[i]); smp.sort((a, b) => a - b);
+  const lo = smp[Math.floor(smp.length * 0.02)], hi = smp[Math.floor(smp.length * 0.9)], span = Math.max(0.08, hi - lo);
+  stripDim = hi < DIM_PAPER; window.__paperHi = hi;                          // only correct pages that are actually dim; daylight pages stay as they are
+  if (stripDim) for (let i = 0; i < g.length; i++) g[i] = Math.min(1, Math.max(0, (g[i] - lo) / span * 0.92 + 0.04));
   return { g, w, h };
 }
 function loadOCR() {
@@ -333,8 +340,8 @@ function loadOCR() {
   }).catch(e => { console.warn('OCR unavailable', e); return null; });
   return ocrLoading;
 }
-async function readName() {
-  childName = null; nameInfo = { status: 'reading' };
+async function readNameOnce() {
+  nameInfo = { status: 'reading' };
   if (!nameRT) { nameInfo = { status: 'no-boxes' }; return; }
   const { g, w, h } = grabName();
   const found = findBoxes(g, w, h);
@@ -344,15 +351,21 @@ async function readName() {
   for (const b of found.boxes) {                       // box interior, inset to stay clear of the printed lines
     const ic = (b.c1 - b.c0) * 0.15, ir = (b.r1 - b.r0) * 0.13;
     const cw = Math.max(4, Math.round(b.c1 - b.c0 - 2 * ic)), ch = Math.max(4, Math.round(b.r1 - b.r0 - 2 * ir));
-    const cell = new Float32Array(cw * ch); let dark = 0;
-    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const v = sampleRot(g, w, h, found.rot, b.c0 + ic + x, b.r0 + ir + y); cell[y * cw + x] = v; if (v < 0.5) dark++; }
-    ink.push(dark / (cw * ch)); cells.push({ cell, cw, ch });
+    const cell = new Float32Array(cw * ch);
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) cell[y * cw + x] = sampleRot(g, w, h, found.rot, b.c0 + ic + x, b.r0 + ir + y);
+    cells.push({ cell, cw, ch });
   }
-  const filled = ink.map(v => v > 0.03);
+  // adaptive ink level: halfway between this page's paper and the darkest pen strokes inside the boxes
+  const all = []; cells.forEach(c => { for (let i = 0; i < c.cell.length; i += 3) all.push(c.cell[i]); }); all.sort((a, b) => a - b);
+  const paperV = all[Math.floor(all.length * 0.7)], inkV = all[Math.floor(all.length * 0.01)], contrast = paperV - inkV;
+  const T = contrast > 0.18 ? (paperV + inkV) / 2 : 0.5, TV = contrast > 0.18 ? 0.17 * contrast : 0.1;
+  cells.forEach(c => { let dark = 0; for (let i = 0; i < c.cell.length; i++) if (c.cell[i] < T) dark++; ink.push(dark / c.cell.length); });
+  const inkThr = Math.max(0.05, 0.22 * Math.max(...ink));    // relative to how bold this child's letters are
+  const filled = ink.map(v => v > inkThr);
   let n = 0; while (n < filled.length && filled[n]) n++;
-  nameInfo = { status: 'checked', angle: found.angle, scale: found.scale, lineStrength: found.lineStrength, ink: ink.map(v => +v.toFixed(3)), letters: n };
+  nameInfo = { status: 'checked', T: +T.toFixed(2), contrast: +contrast.toFixed(2), angle: found.angle, scale: found.scale, lineStrength: found.lineStrength, ink: ink.map(v => +v.toFixed(3)), letters: n };
   if (n < 2 || filled.slice(n).some(Boolean)) { nameInfo.status = 'no-name'; return; }
-  if (ink.slice(0, n).some(v => v > 0.42)) { nameInfo.status = 'messy'; return; }   // scribbles fill boxes far more than letters do
+  if (ink.slice(0, n).some(v => v > 0.6)) { nameInfo.status = 'messy'; return; }   // scribbles fill boxes far more than letters do
   // tidy word image: each letter in black on white, side by side
   const H = 72, gap = 16, pad = 24;
   const cv = document.createElement('canvas'), cx = cv.getContext('2d');
@@ -363,7 +376,7 @@ async function readName() {
   cells.slice(0, n).forEach(({ cell, cw, ch }, i) => {
     const tmp = document.createElement('canvas'); tmp.width = cw; tmp.height = ch;
     const t = tmp.getContext('2d'), img = t.createImageData(cw, ch);
-    for (let k = 0; k < cw * ch; k++) { const v = cell[k] < 0.55 ? 0 : 255; img.data[k * 4] = img.data[k * 4 + 1] = img.data[k * 4 + 2] = v; img.data[k * 4 + 3] = 255; }
+    for (let k = 0; k < cw * ch; k++) { const v = cell[k] < T + 0.05 * contrast ? 0 : 255; img.data[k * 4] = img.data[k * 4 + 1] = img.data[k * 4 + 2] = v; img.data[k * 4 + 3] = 255; }
     t.putImageData(img, 0, 0);
     cx.drawImage(tmp, ox, pad, widths[i], H); ox += widths[i] + gap;
   });
@@ -380,9 +393,9 @@ async function readName() {
   nameInfo.looksLikeName = looksLikeName;
   // second opinion: read the word again from a darker and a lighter version of the cut-out; all readings must match
   let agree = false;
-  if (text.length === n && looksLikeName && minConf >= NAME_MIN_CONF) {
+  if (text.length === n && looksLikeName && minConf >= NAME_MAYBE_CONF) {
     const variants = [];
-    for (const thr of [0.45, 0.65]) {
+    for (const thr of [T - TV, T + TV]) {
       const v = document.createElement('canvas'); v.width = cv.width; v.height = cv.height; const vx = v.getContext('2d');
       vx.fillStyle = '#fff'; vx.fillRect(0, 0, v.width, v.height);
       let o = pad;
@@ -397,14 +410,50 @@ async function readName() {
     agree = variants.every(t => t.toLowerCase() === text.toLowerCase());
     nameInfo.variants = variants.join('/');
   }
-  nameInfo.agree = agree;
-  if (agree) {
-    childName = text[0].toUpperCase() + text.slice(1).toLowerCase();
-    nameInfo.status = 'read';
-    showBubble();
-  } else nameInfo.status = 'unsure';
+  nameInfo.agree = agree; nameInfo.status = agree ? 'candidate' : 'unsure';
+  // fingerprint of the cut-out letters, so the same camera frame is never counted twice
+  const sig = []; cells.slice(0, n).forEach(({ cell, cw, ch }) => { for (let y = 0; y < 8; y++) for (let x = 0; x < 6; x++) sig.push(cell[Math.floor((y + 0.5) * ch / 8) * cw + Math.floor((x + 0.5) * cw / 6)]); });
+  return { text, minConf, agree, sig };
 }
-const NAME_MIN_CONF = 92;
+const NAME_MAYBE_CONF = 90;
+/* keep looking for ~12 s: accept one very sure reading, or the same reading from two separate camera frames */
+let readToken = 0;
+/* ?debug=1 shows what the name reader saw, for testing on a real phone */
+const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
+let dbg = null;
+function showDebug() {
+  if (!DEBUG) return;
+  if (!dbg) { dbg = document.createElement('div'); dbg.style.cssText = 'position:fixed;left:8px;right:8px;top:70px;z-index:99;background:rgba(0,0,0,.75);color:#fff;font:12px/1.35 monospace;padding:8px;border-radius:10px;pointer-events:none;white-space:pre-wrap'; document.body.appendChild(dbg); }
+  const i = nameInfo || {};
+  dbg.textContent = `name: ${childName || '-'}  status: ${i.status}  text: ${i.text || ''}  conf: ${i.minConf ?? ''}\nvariants: ${i.variants || ''}  seen: ${JSON.stringify(i.seen || {})}\nlines: ${i.lineStrength}  contrast: ${i.contrast}  paper: ${(window.__paperHi || 0).toFixed(2)}  ink: ${(i.ink || []).map(v => v.toFixed(2)).join(' ')}\n`;
+  if (typeof window.__debugStrip === 'string') { const im = new Image(); im.src = window.__debugStrip; im.style.cssText = 'width:100%;margin-top:6px;background:#fff'; dbg.appendChild(im); }
+  if (i.image) { i.image.style.cssText = 'width:100%;margin-top:6px;background:#fff'; dbg.appendChild(i.image); }
+}
+if (DEBUG) window.__debugStrip = true;
+async function readName() {
+  const my = ++readToken; childName = null; const seen = {};
+  const t0 = performance.now();
+  while (performance.now() - t0 < 20000) {
+    if (my !== readToken || childName) return;
+    if (state === 'alive' && tracked) {
+      const r = await readNameOnce();
+      if (my !== readToken) return;
+      if (r && r.agree) {
+        const key = r.text.toLowerCase();
+        const prev = (seen[key] = seen[key] || []);
+        const fresh = prev.every(p => p.length !== r.sig.length || r.sig.reduce((d, v, i) => d + Math.abs(v - p[i]), 0) / r.sig.length > 0.02);
+        if (fresh && r.minConf >= NAME_MAYBE_CONF) prev.push(r.sig);
+        if (prev.length >= 2) {   // two different camera frames agree
+          childName = r.text[0].toUpperCase() + r.text.slice(1).toLowerCase();
+          nameInfo.status = 'read'; showBubble(); showDebug(); return;
+        }
+      }
+      nameInfo.seen = Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, v.length])); showDebug();
+      if (DEBUG) window.__debugStrip = true;
+    }
+    await new Promise(res => setTimeout(res, 900));
+  }
+}
 
 let bubble = null, bubbleCanvas = null, bubbleIdx = -1, bubbleT = 0;
 function bubbleLines() { return [`Hi ${childName}!`, `Good job, ${childName}!`, `I love my colors!`]; }
@@ -434,8 +483,9 @@ async function showBubble() {
   }
   try { await document.fonts.load('800 92px Gluten'); } catch (e) {}
   bubbleIdx = -1; bubbleT = 0; bubble.visible = true;
+  TOON.joy = true; // celebrate the name with a big spin jump
 }
-function hideBubble() { childName = null; if (bubble) bubble.visible = false; }
+function hideBubble() { readToken++; childName = null; if (bubble) bubble.visible = false; }
 function animateBubble(dt) {
   if (!bubble || !bubble.visible || !childName) return;
   bubbleT += dt;
@@ -455,11 +505,107 @@ function setState(s) {
   mg.hidden = s !== 'capturing';
   mg.classList.remove('run'); if (s === 'capturing') { void mg.offsetWidth; mg.classList.add('run'); }
   $('rec').disabled = !(s === 'alive');
-  if (s === 'alive') popT = 0;
+  if (s === 'alive') { popT = 0; resetToon(); }
 }
 
 const easeOutBack = t => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
 const camLocal = new THREE.Vector3(), inv = new THREE.Matrix4();
+/* smooth the tracked pose: steady when the phone is still, quick to follow when it moves */
+const anchorS = new THREE.Matrix4(), sP = new THREE.Vector3(), sQ = new THREE.Quaternion(), sS = new THREE.Vector3();
+const rP = new THREE.Vector3(), rQ = new THREE.Quaternion(), rS = new THREE.Vector3();
+let sInit = false;
+function smoothAnchor(dt) {
+  anchorM.decompose(rP, rQ, rS);
+  if (!sInit || !tracked && performance.now() - lastSeen > 700) { sP.copy(rP); sQ.copy(rQ); sS.copy(rS); sInit = true; }
+  const move = rP.distanceTo(sP) / Math.max(1e-6, rS.x);           // in page widths
+  const a = 1 - Math.exp(-dt * (move > 0.04 ? 30 : 9 + move * 500));
+  sP.lerp(rP, a); sQ.slerp(rQ, a); sS.lerp(rS, a);
+  anchorS.compose(sP, sQ, sS);
+}
+
+
+/* ---------- cartoon performance: springs, squash & stretch, anticipation, follow-through ---------- */
+const TOON = {};
+function resetToon() {
+  Object.assign(TOON, {
+    h: 0, vh: 0, air: false, s: -0.45, vs: 0, k: 0, vk: 0, r: 0, vr: 0, spin: 0, spinV: 0,
+    stand: 0, vstand: 0, act: null, actT: 0, rest: 0.9, joy: false, land: 0, sT: 0, kT: 0, rT: 0, lastAct: '',
+  });
+}
+resetToon();
+const spring = (x, v, target, w, z, dt) => v + (w * w * (target - x) - 2 * z * w * v) * dt;
+const GRAV = 2.4;
+function launch(height, spinTurns) {
+  TOON.vh = Math.sqrt(2 * GRAV * height); TOON.air = true; TOON.vs += 3.2;
+  if (spinTurns) TOON.spinV = (spinTurns * 2 * Math.PI) / (2 * TOON.vh / GRAV);
+}
+/* acts: each returns targets for squash (sT), lean (kT) and tilt (rT) at time tau, and can launch hops */
+const ACTS = {
+  hop:    { dur: 0.75, f(t, a) { if (t < 0.16) TOON.sT = -0.24; else if (!a.done) { a.done = 1; TOON.sT = 0; launch(0.045); } } },
+  hop2:   { dur: 1.35, f(t, a) { if (t < 0.14 || (t > 0.62 && t < 0.74 && !TOON.air)) TOON.sT = -0.22;
+                                  else { TOON.sT = 0; if (t < 0.6 && !a.d1) { a.d1 = 1; launch(0.035); } if (t >= 0.74 && !a.d2) { a.d2 = 1; launch(0.055); } } } },
+  bigspin:{ dur: 1.3, f(t, a) { if (t < 0.24) { TOON.sT = -0.34; TOON.kT = 0.08 * Math.sin(t * 90); } else if (!a.done) { a.done = 1; TOON.sT = 0; TOON.kT = 0; launch(0.1, 1); } } },
+  wiggle: { dur: 1.6, f(t) { const w = Math.sin(t * Math.PI / 1.6); TOON.kT = 0.3 * Math.sin(t * 2 * Math.PI * 2.4) * w;
+                             TOON.rT = 0.07 * Math.sin(t * 2 * Math.PI * 1.2) * w; TOON.sT = 0.06 * Math.abs(Math.sin(t * 2 * Math.PI * 2.4)) * w; } },
+  tilt:   { dur: 1.4, f(t, a) { a.dir = a.dir || (Math.random() < 0.5 ? -1 : 1); TOON.rT = t < 0.9 ? 0.2 * a.dir : 0; TOON.sT = t < 0.9 ? 0.04 : 0; } },
+  yawn:   { dur: 1.6, f(t) { TOON.sT = t < 0.7 ? 0.28 * Math.min(1, t / 0.45) : (t < 0.95 ? -0.14 : 0); TOON.kT = t < 0.7 ? -0.06 : 0; } },
+  joy:    { dur: 1.9, f(t, a) { if (t < 0.4) { TOON.sT = -0.18; TOON.kT = 0.07 * Math.sin(t * 110); TOON.rT = 0.03 * Math.sin(t * 77); }
+                                  else if (!a.done) { a.done = 1; TOON.sT = 0; TOON.kT = 0; TOON.rT = 0; launch(0.13, 1); } } },
+  // hanging things (bell, stocking): pivot at the top
+  swing:  { dur: 2.2, f(t, a) { if (!a.done) { a.done = 1; TOON.vr += (Math.random() < 0.5 ? -1 : 1) * 2.6; } } },
+  boing:  { dur: 1.2, f(t, a) { if (t < 0.12) TOON.sT = -0.15; else if (!a.done) { a.done = 1; TOON.sT = 0; TOON.vs += 5.5; } } },
+  jingle: { dur: 1.1, f(t) { TOON.rT = 0.12 * Math.sin(t * 2 * Math.PI * 5) * Math.sin(t * Math.PI / 1.1); } },
+};
+const HOPPER = ['hop', 'wiggle', 'hop2', 'tilt', 'hop', 'bigspin', 'yawn', 'wiggle'];
+const HANGER = ['swing', 'jingle', 'boing', 'swing'];
+function stepToon(dt, t) {
+  const hanging = data.motion === 'swing';
+  // pick the next act after a short "moving hold"
+  if (!TOON.act) {
+    TOON.rest -= dt;
+    TOON.sT = 0.018 * Math.sin(t * 2 * Math.PI * 0.9); TOON.kT = 0.03 * Math.sin(t * 2 * Math.PI * 0.45); TOON.rT = 0;
+    if (TOON.joy && !hanging) { TOON.joy = false; TOON.act = { name: 'joy', t: 0 }; }
+    else if (TOON.rest <= 0) {
+      const list = hanging ? HANGER : HOPPER; let name;
+      do { name = list[Math.floor(Math.random() * list.length)]; } while (name === TOON.lastAct && list.length > 1);
+      TOON.act = { name, t: 0 }; TOON.lastAct = name;
+    }
+  }
+  if (TOON.act) {
+    const A = ACTS[TOON.act.name]; TOON.act.t += dt; A.f(TOON.act.t, TOON.act);
+    if (TOON.act.t >= A.dur && !TOON.air) { TOON.act = null; TOON.rest = 0.35 + Math.random() * 0.8; TOON.sT = 0; TOON.kT = 0; TOON.rT = 0; }
+  }
+  // physics in small fixed steps so it's smooth at any frame rate
+  const n = Math.max(1, Math.ceil(dt / (1 / 120))), h = dt / n;
+  for (let i = 0; i < n; i++) {
+    if (TOON.air) {
+      TOON.vh -= GRAV * h; TOON.h += TOON.vh * h;
+      const st = 0.26 * Math.min(1, Math.abs(TOON.vh) / 0.8);       // stretch along the motion
+      TOON.vs = spring(TOON.s, TOON.vs, st, 22, 0.5, h);
+      TOON.spin += TOON.spinV * h;
+      if (TOON.h <= 0 && TOON.vh < 0) {                                 // landing: splat, then wobble
+        const impact = Math.abs(TOON.vh); TOON.h = 0; TOON.vh = 0; TOON.air = false;
+        TOON.vs -= 7.5 * impact; TOON.spin = 0; TOON.spinV = 0; TOON.land = impact;
+        for (const piv of rigParts) piv.userData.va += (piv.userData.motion.sign || 1) * 9 * impact;
+      }
+    } else {
+      TOON.vs = spring(TOON.s, TOON.vs, TOON.sT, 17, hanging ? 0.16 : 0.22, h);
+    }
+    TOON.s += TOON.vs * h;
+    TOON.vk = spring(TOON.k, TOON.vk, TOON.kT, 11, 0.28, h); TOON.k += TOON.vk * h;
+    TOON.vr = spring(TOON.r, TOON.vr, TOON.rT + (hanging ? 0.05 * Math.sin(t * 2.1) : 0), hanging ? 4.2 : 9, hanging ? 0.06 : 0.32, h); TOON.r += TOON.vr * h;
+    TOON.vstand = spring(TOON.stand, TOON.vstand, 1, 9.5, 0.3, h); TOON.stand += TOON.vstand * h;
+  }
+  // compose: pivot at the feet (or the hook for hanging things)
+  const P0 = hanging ? new THREE.Vector3(BP.x - B.x, BP.y - B.y, 0) : new THREE.Vector3(0, 0, 0);
+  const sy = Math.max(0.45, 1 + TOON.s), sx = 1 / Math.sqrt(sy);
+  const M = new THREE.Matrix4().makeTranslation(P0.x, P0.y + TOON.h, 0)
+    .multiply(new THREE.Matrix4().makeRotationZ(TOON.r))
+    .multiply(new THREE.Matrix4().set(1, TOON.k, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
+    .multiply(new THREE.Matrix4().makeScale(sx * Math.cos(TOON.spin), sy, 1))
+    .multiply(new THREE.Matrix4().makeTranslation(-P0.x, -P0.y, 0));
+  toon.matrix.copy(M); toon.matrixWorldNeedsUpdate = true;
+}
 
 function animate(now) {
   requestAnimationFrame(animate);
@@ -476,50 +622,43 @@ function animate(now) {
   }
   if (state === 'alive' && !visible) setState('scanning');
 
-  anchor.matrix.copy(anchorM);
+  smoothAnchor(dt);
+  anchor.matrix.copy(anchorS);
   anchor.visible = visible && state === 'alive';
 
   if (state === 'alive') {
-    popT = Math.min(1, popT + 1 / 55);
-    // stand up facing the phone
-    inv.copy(anchorM).invert(); camLocal.set(0, 0, 0).applyMatrix4(inv);
+    popT = Math.min(1, popT + dt / 0.9);
+    stepToon(dt, t);
+    // stand up facing the phone, on a spring so it overshoots and settles like a cartoon
+    inv.copy(anchorS).invert(); camLocal.set(0, 0, 0).applyMatrix4(inv);
     const target = THREE.MathUtils.clamp(Math.atan2(-(camLocal.y - B.y), camLocal.z), 0.3, 1.35);
-    standAngle += (target - standAngle) * 0.08;
-    const pop = easeOutBack(popT);
-    root.rotation.x = standAngle * pop;
-    const beat0 = t * 2 * Math.PI * 1.15;
-    const lift = 0.05 * pop + 0.018 * Math.abs(Math.sin(beat0)) * Math.max(0, popT - 0.6) / 0.4;
-    root.position.z = 0.002 + lift;
-    root.scale.setScalar(1 + 0.07 * pop);
-    shadow.material.opacity = 0.18 + 0.2 * Math.min(1, popT * 2);
+    standAngle += (target - standAngle) * Math.min(1, dt * 4);
+    root.rotation.x = standAngle * TOON.stand;
+    root.position.z = 0.002 + 0.05 * Math.min(1, TOON.stand);
+    root.scale.setScalar(1.07);
     root.visible = true; shadow.visible = true;
-    patchMat.uniforms.uOpacity.value = Math.min(0.96, popT * 1.4);
-    const d = Math.max(0, popT - 0.6) / 0.4, beat = t * 2 * Math.PI * 1.15;
-    const base = bodyG.userData.base, hopS = Math.abs(Math.sin(beat));
-    bodyG.position.copy(base); bodyG.rotation.z = 0; bodyG.scale.set(1, 1, 1);
-    if (data.motion === 'dance') {
-      bodyG.rotation.z = 0.13 * Math.sin(beat) * d;
-      bodyG.position.y = base.y + 0.025 * hopS * d;
-    } else if (data.motion === 'bounce') {
-      const squash = Math.pow(1 - hopS, 4) * d;
-      bodyG.position.y = base.y + 0.05 * hopS * d;
-      bodyG.scale.set(1 + 0.08 * squash, 1 - 0.08 * squash, 1);
-      bodyG.rotation.z = 0.05 * Math.sin(beat * 0.5) * d;
-    } else if (data.motion === 'swing') {
-      bodyG.rotation.z = 0.28 * Math.sin(beat * 0.8) * d;
-    }
+    patchMat.uniforms.uOpacity.value = Math.min(0.96, popT * 2);
+    const d = Math.min(1, Math.max(0, popT - 0.4) / 0.6), beat = t * 2 * Math.PI * 1.15;
+    const busy = TOON.act ? 0.45 : 1;   // parts calm down while the body performs, then flop on landings
     for (const piv of rigParts) {
-      const m = piv.userData.motion, sg = m.sign || 1, ph = m.phase || 0, sp = m.speed || 1;
-      piv.position.copy(piv.userData.base); piv.rotation.z = 0; piv.scale.set(1, 1, 1);
-      if (m.type === 'rot') piv.rotation.z = m.amp * Math.sin(beat * sp + ph) * d;
-      else if (m.type === 'flap') piv.rotation.z = sg * (m.base + m.amp * (0.5 + 0.5 * Math.sin(beat * 2 + ph))) * d;
-      else if (m.type === 'tap') piv.rotation.z = sg * m.amp * Math.max(0, Math.sin(beat + ph)) * d;
-      else if (m.type === 'pop') { const k = Math.pow(Math.max(0, Math.sin(beat)), 2) * d; piv.position.y += m.amp * k; piv.rotation.z = -0.22 * k; }
-      else if (m.type === 'twinkle') { piv.rotation.z = t * 1.6 * d; piv.scale.setScalar(1 + 0.18 * Math.sin(t * 5) * d); }
+      const m = piv.userData.motion, sg = m.sign || 1, ph = m.phase || 0, sp = m.speed || 1, u = piv.userData;
+      piv.position.copy(u.base); piv.scale.set(1, 1, 1);
+      let tgt = 0;
+      if (m.type === 'rot') tgt = m.amp * Math.sin(beat * sp + ph) * d * busy;
+      else if (m.type === 'flap') tgt = sg * (m.base + m.amp * (0.5 + 0.5 * Math.sin(beat * 2 + ph))) * d * busy;
+      else if (m.type === 'tap') tgt = sg * m.amp * Math.max(0, Math.sin(beat + ph)) * d * busy;
+      else if (m.type === 'pop') { const k = Math.pow(Math.max(0, Math.sin(beat)), 2) * d + 0.8 * Math.min(1, TOON.s < -0.1 ? -TOON.s * 3 : 0); piv.position.y += m.amp * k; tgt = -0.22 * k; }
+      else if (m.type === 'twinkle') { piv.scale.setScalar(1 + 0.22 * Math.sin(t * 5) * d); u.a = t * 1.6 * d; piv.rotation.z = u.a; continue; }
+      tgt += -0.6 * TOON.vk * 0.08 * sg;   // drag behind the body's lean
+      u.va = spring(u.a, u.va, tgt, 13, 0.16, dt); u.a += u.va * dt;
+      u.a = THREE.MathUtils.clamp(u.a, -1.2, 1.2);
+      piv.rotation.z = u.a;
     }
-    const blink = (t % 3.2) < 0.14;
+    const blink = (t % 3.2) < 0.13 || (TOON.land > 0.3 && TOON.s < -0.12);
     lids.forEach(l => { l.visible = blink && d > 0.5; });
-    shadow.scale.set(1 - 0.25 * hopS * d * (data.motion === 'swing' ? 0 : 1), 1, 1);
+    const lift = TOON.h * 6;
+    shadow.scale.set((1 - Math.min(0.55, lift)) * (1 + 0.25 * Math.max(0, -TOON.s)), 1, 1);
+    shadow.material.opacity = (0.18 + 0.2 * Math.min(1, popT * 2)) * (1 - Math.min(0.6, lift));
     if (smoke) {
       const p = smoke.geometry.attributes.position, n = p.count;
       smoke.material.opacity = 0.85 * d;
