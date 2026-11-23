@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /scan/
+Sitemap: https://marymarii.com/sitemap.xml
