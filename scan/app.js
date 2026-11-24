@@ -651,7 +651,7 @@ const rP = new THREE.Vector3(), rQ = new THREE.Quaternion(), rS = new THREE.Vect
 let sInit = false;
 function smoothAnchor(dt) {
   anchorM.decompose(rP, rQ, rS);
-  if (!sInit || !tracked && performance.now() - lastSeen > 700) { sP.copy(rP); sQ.copy(rQ); sS.copy(rS); sInit = true; }
+  if (!sInit || !tracked && performance.now() - lastSeen > HOLD_MS) { sP.copy(rP); sQ.copy(rQ); sS.copy(rS); sInit = true; }
   const move = rP.distanceTo(sP) / Math.max(1e-6, rS.x);           // in page widths
   const a = 1 - Math.exp(-dt * (move > 0.04 ? 30 : 9 + move * 500));
   sP.lerp(rP, a); sQ.slerp(rQ, a); sS.lerp(rS, a);
@@ -661,6 +661,8 @@ function smoothAnchor(dt) {
 
 /* ---------- cartoon performance: springs, squash & stretch, anticipation, follow-through ---------- */
 const TOON = {};
+const SLOW = 0.72;     // overall tempo: calmer, easier to follow
+const HOLD_MS = 2200;  // keep the character on the page this long when the camera briefly loses it
 function resetToon() {
   Object.assign(TOON, {
     h: 0, vh: 0, air: false, s: -0.45, vs: 0, k: 0, vk: 0, r: 0, vr: 0, spin: 0, spinV: 0,
@@ -708,7 +710,7 @@ function stepToon(dt, t) {
   }
   if (TOON.act) {
     const A = ACTS[TOON.act.name]; TOON.act.t += dt; A.f(TOON.act.t, TOON.act);
-    if (TOON.act.t >= A.dur && !TOON.air) { TOON.act = null; TOON.rest = 0.35 + Math.random() * 0.8; TOON.sT = 0; TOON.kT = 0; TOON.rT = 0; }
+    if (TOON.act.t >= A.dur && !TOON.air) { TOON.act = null; TOON.rest = 0.8 + Math.random() * 1.2; TOON.sT = 0; TOON.kT = 0; TOON.rT = 0; }
   }
   // physics in small fixed steps so it's smooth at any frame rate
   const n = Math.max(1, Math.ceil(dt / (1 / 120))), h = dt / n;
@@ -736,7 +738,7 @@ function stepToon(dt, t) {
   const sy = Math.max(0.45, 1 + TOON.s), sx = 1 / Math.sqrt(sy);
   const M = new THREE.Matrix4().makeTranslation(P0.x, P0.y + TOON.h, 0)
     .multiply(new THREE.Matrix4().makeRotationZ(TOON.r))
-    .multiply(new THREE.Matrix4().set(1, TOON.k, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
+    .multiply(new THREE.Matrix4().set(1, TOON.k * 0.6, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))   // gentler lean
     .multiply(new THREE.Matrix4().makeScale(sx * Math.cos(TOON.spin), sy, 1))
     .multiply(new THREE.Matrix4().makeTranslation(-P0.x, -P0.y, 0));
   toon.matrix.copy(M); toon.matrixWorldNeedsUpdate = true;
@@ -746,7 +748,7 @@ function animate(now) {
   requestAnimationFrame(animate);
   if (!controller) return;
   const t = now / 1000;
-  const visible = tracked || (now - lastSeen < 700);
+  const visible = tracked || (now - lastSeen < HOLD_MS);
   const dt = Math.min(0.1, (now - (animate.last || now)) / 1000); animate.last = now;
   if (state === 'alive') animateBubble(dt);
 
@@ -763,7 +765,7 @@ function animate(now) {
 
   if (state === 'alive') {
     popT = Math.min(1, popT + dt / 0.9);
-    stepToon(dt, t);
+    stepToon(dt * SLOW, t * SLOW);
     // stand up facing the phone, on a spring so it overshoots and settles like a cartoon
     inv.copy(anchorS).invert(); camLocal.set(0, 0, 0).applyMatrix4(inv);
     const target = THREE.MathUtils.clamp(Math.atan2(-(camLocal.y - B.y), camLocal.z), 0.3, 1.35);
@@ -774,7 +776,7 @@ function animate(now) {
     root.rotation.y = 0.28 * Math.sin(t * 0.9) * Math.min(1, TOON.stand);   // a slow turn shows off the thickness
     root.visible = true; shadow.visible = true;
     patchMat.uniforms.uOpacity.value = Math.min(0.96, popT * 2);
-    const d = Math.min(1, Math.max(0, popT - 0.4) / 0.6), beat = t * 2 * Math.PI * 1.15;
+    const d = Math.min(1, Math.max(0, popT - 0.4) / 0.6), beat = t * SLOW * 2 * Math.PI * 1.15;
     const busy = TOON.act ? 0.45 : 1;   // parts calm down while the body performs, then flop on landings
     for (const piv of rigParts) {
       const m = piv.userData.motion, sg = m.sign || 1, ph = m.phase || 0, sp = m.speed || 1, u = piv.userData;
@@ -787,7 +789,8 @@ function animate(now) {
       else if (m.type === 'twinkle') { piv.scale.setScalar(1 + 0.22 * Math.sin(t * 5) * d); u.a = t * 1.6 * d; piv.rotation.z = u.a; continue; }
       tgt += -0.6 * TOON.vk * 0.08 * sg;   // drag behind the body's lean
       u.va = spring(u.a, u.va, tgt, 13, 0.16, dt); u.a += u.va * dt;
-      u.a = THREE.MathUtils.clamp(u.a, -1.2, 1.2);
+      const lim = CLEAN && m.amp ? m.amp + 0.12 : 1.2;   // drawn characters: limbs stay close to their lines
+      u.a = THREE.MathUtils.clamp(u.a, -lim, lim);
       piv.rotation.z = u.a;
     }
     const blink = (t % 3.2) < 0.13 || (TOON.land > 0.3 && TOON.s < -0.12);
@@ -835,14 +838,14 @@ async function startWith(stream) {
   if (!data) data = await (await fetch(SHEET.parts)).json();
   if (data.clean && !inkTex) {   // a drawn character: fixed outline and lines, the camera only brings the colors
     CLEAN = true;
-    inkTex = await new THREE.TextureLoader().loadAsync(`targets/${data.clean.ink}?v=1`);
+    inkTex = await new THREE.TextureLoader().loadAsync(`targets/${data.clean.ink}?v=2`);
     inkTex.minFilter = THREE.LinearFilter; inkTex.generateMipmaps = false;
   }
   if (controller) controller.stopProcessVideo();
   globalThis.__MINDAR_FOVY = FOV_OVERRIDE || (video.videoHeight >= video.videoWidth ? 64 : 50);
   controller = new window.MINDAR.IMAGE.Controller({
     inputWidth: video.videoWidth, inputHeight: video.videoHeight, maxTrack: 1,
-    missTolerance: 6, warmupTolerance: 3,
+    missTolerance: 15, warmupTolerance: 2,   // dim rooms: hold on longer before giving up on the page
     onUpdate: d => {
       if (d.type !== 'updateMatrix') return;
       updates++;
@@ -874,6 +877,12 @@ $('start-btn').addEventListener('click', async () => {
     try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } } });
     await startWith(stream);
+    // phone flashlight, where the browser allows it: dim rooms make the page hard to find
+    const track = stream.getVideoTracks()[0], caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.torch) {
+      let on = false; const btn = $('torch'); btn.hidden = false;
+      btn.onclick = async () => { on = !on; try { await track.applyConstraints({ advanced: [{ torch: on }] }); btn.textContent = on ? '💡 Light off' : '💡 Light'; } catch (e) { btn.hidden = true; } };
+    }
   } catch (e) {
     const err = $('start-err');
     err.hidden = false;
