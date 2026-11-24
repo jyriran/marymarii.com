@@ -184,15 +184,15 @@ function finalizeCutout() {
   }
   // the printed dots and numbers sit right against that paper: drop anything uncolored next to it
   const near = boxBlur(Float32Array.from(out), MW, MH, Math.max(2, Math.round(RT_W / (data.region[2] - data.region[0]) * 11)), 1);
-  const keepAvg = boxBlur(keep, MW, MH, 3, 2);
+  const keepAvg = boxBlur(keep, MW, MH, 4, 2);
   const alpha0 = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     if (out[i]) continue;
     alpha0[i] = near[i] > 0.01 ? Math.min(1, Math.max(0, (keepAvg[i] - 0.3) / 0.25)) : 1;
   }
-  const sm = boxBlur(alpha0, MW, MH, 3, 2);                       // round off the bites the dots leave
-  const alpha = sm.map(v => Math.min(1, Math.max(0, (v - 0.5) / 0.15)));
-  const nearEdge = boxBlur(alpha, MW, MH, 2, 2);
+  const sm = boxBlur(alpha0, MW, MH, 6, 3);                       // round off the bites the dots leave: smooth, flowing edge
+  const alpha = sm.map(v => Math.min(1, Math.max(0, (v - 0.5) / 0.08 + 0.5)));
+  const nearEdge = boxBlur(alpha, MW, MH, 3, 2);
   const ink = alpha.map((v, i) => v * Math.min(1, Math.max(0, (0.97 - nearEdge[i]) / 0.2)));
   writeMask(alpha, boxBlur(alpha, MW, MH, 4, 2), ink);
   // the cut-out's thickness: the child's colors smoothed, without the printed lines
@@ -212,7 +212,7 @@ const CUT_FS = `varying vec2 vUv; uniform sampler2D uMap; uniform sampler2D uMas
     vec3 k = texture2D(uMask, vUv).rgb;
     if (k.r < 0.02) discard;
     vec3 c = texture2D(uMap, vUv).rgb;
-    if (uSide > 0.5) { gl_FragColor = vec4(texture2D(uSideMap, vUv).rgb * 0.62, k.r); return; }
+    if (uSide > 0.5) { gl_FragColor = vec4(texture2D(uSideMap, vUv).rgb * 0.62, smoothstep(0.6, 0.75, k.g)); return; }
     // bevel: light from the top left falls on a rounded edge
     vec2 e = uPx * 3.0;
     vec2 n = vec2(texture2D(uMask, vUv + vec2(e.x, 0.0)).g - texture2D(uMask, vUv - vec2(e.x, 0.0)).g,
