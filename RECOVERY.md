@@ -50,4 +50,6 @@ If a chat or workspace is lost, start a new session and say:
 
 ## 7. Next
 - ABC: JR swaps photos to the new-border versions + adds a real photo, then publish on his yes; A–Z combo (same 4 PDFs, ~€10.90).
-- 123 Count & Connect (numbers 1–20) in progress – see project doc claude/123-bundle-plan.md.
+- 123 Count & Connect (numbers 1–20): PDFs built 24 Nov (A4 + Letter, 23 pages: cover, how-to, 20 number pages, colour ideas). Magic camera live for n1…n20 (drawn characters; the animal hops N times while counters 1…N pop up). Etsy listing, cards and mockups still to do. See project doc claude/123-bundle-plan.md.
+- 123 build: n123/digits.py (digit stroke skeletons + number words), n123/animals123.py (20 new procedural animals), n123/build123.py (`python3 build123.py bundle`; `python3 build123.py 7` = sample page), n123/gen123.py (AR data → /home/claude/ar/gen123), n123/compile123.py (MindAR targets), then clean/build_clean.py n1 … n20 (needs the JSONs copied to clean/orig first).
+- Page n layout: title "7 · seven", name boxes, big dotted number with stroke badges, number word to trace, animal dot-to-dot (right), practice row, counting box (N icons + "Write it" box + ten-frame(s)), QR strip. Border uses digits instead of letters (seed '123-<n>').

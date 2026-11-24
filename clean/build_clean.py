@@ -6,7 +6,9 @@ from build_bear import chaikin
 TG = '/home/claude/repo-marymarii/scan/targets'
 LIC = {'santa', 'snowman', 'reindeer'}
 def page(key, size):
-    p = f'/home/claude/ar/genabc/pages/{size}/{key}.png' if key.startswith('abc-') else f'/home/claude/ar/gen/pages/{size}/{key}.png'
+    import re
+    p = (f'/home/claude/ar/genabc/pages/{size}/{key}.png' if key.startswith('abc-') else f'/home/claude/ar/gen123/pages/{size}/{key}.png' if re.fullmatch(r'n\d+', key)
+         else f'/home/claude/ar/gen/pages/{size}/{key}.png')
     return cv2.imread(p, 0)
 def find_dots(g):
     bw = (g < 110).astype(np.uint8)
@@ -72,7 +74,7 @@ def build(key, size):
     parts = [(pt, unary_union([Polygon(p).buffer(0) for p in pt['polys']])) for pt in d['parts']]
     U = unary_union([body] + [p for _, p in parts])
     C, r = find_dots(g)
-    unit = r / 11.0 if not key.startswith('abc-') else r / 7.0
+    unit = r / 11.0 if not (key.startswith('abc-') or key[:1] == 'n') else r / 7.0
     if key in LIC:
         base = None
     else:
