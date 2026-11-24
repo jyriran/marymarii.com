@@ -126,7 +126,7 @@ function partGeometry(polys, origin) {
 /* cut-out: keep the child's coloring, drop the printed dots, numbers and white paper around the edge.
    Worked out once on the CPU right after the capture, stored as R = alpha, G = soft alpha (bevel), B = drawn outline. */
 const BAND = 20;           // target px (150 dpi): soft edge zone where dots, numbers and paper get keyed out
-let maskTex = null, sideTex = null, polyFill = null, polySoft = null, MW = 0, MH = 0;
+let inkTex = null, CLEAN = false, maskTex = null, sideTex = null, polyFill = null, polySoft = null, MW = 0, MH = 0;
 function boxBlur(a, W, H, r, passes) {
   let b = new Float32Array(W * H);
   const pass = (inp, out, horiz) => {
@@ -161,8 +161,8 @@ function buildMask() {
   maskTex.minFilter = maskTex.magFilter = THREE.LinearFilter;
   sideTex = new THREE.DataTexture(new Uint8Array(MW * MH * 4).fill(150), MW, MH, THREE.RGBAFormat);
   sideTex.minFilter = sideTex.magFilter = THREE.LinearFilter; sideTex.needsUpdate = true;
-  const inner = polySoft.map(v => v > 0.98 ? 1 : 0);
-  writeMask(inner, boxBlur(inner, MW, MH, 4, 2), new Float32Array(MW * MH));
+  const inner = CLEAN ? polyFill : polySoft.map(v => v > 0.98 ? 1 : 0);   // clean characters: the drawn shape is the edge
+  writeMask(inner, boxBlur(inner, MW, MH, CLEAN ? 6 : 4, 2), new Float32Array(MW * MH));
 }
 function finalizeCutout() {
   const N = MW * MH, px = new Uint8Array(N * 4);
@@ -173,6 +173,7 @@ function finalizeCutout() {
     keep[i] = Math.min(1, Math.max(0, (chroma - 12) / 24)) * Math.min(1, Math.max(0, (hi - 95) / 50));  // crayon (even pale pink), not ink
     open[i] = hi > 165 && chroma < 22 ? 1 : 0;                                                       // bare paper
   }
+  if (CLEAN) { sideColors(px, keep); return; }   // fixed outline: nothing to cut, just the colors
   // crayon strokes leave little white gaps: only paper with no coloring nearby counts as open
   const keepAvg = boxBlur(keep, MW, MH, 4, 2);
   // and only near the outline: deep inside the drawing nothing is ever cut away
@@ -198,11 +199,14 @@ function finalizeCutout() {
   const nearEdge = boxBlur(alpha, MW, MH, 3, 2);
   const ink = alpha.map((v, i) => v * Math.min(1, Math.max(0, (0.97 - nearEdge[i]) / 0.2)));
   writeMask(alpha, boxBlur(alpha, MW, MH, 4, 2), ink);
-  // the cut-out's thickness: the child's colors smoothed, without the printed lines
-  const sp = sideTex.image.data;
+  sideColors(px, keep);
+}
+/* the child's colors smoothed, without the printed lines: for the thickness, and to paint over the printed ink */
+function sideColors(px, keep) {
+  const N = MW * MH, sp = sideTex.image.data;
   for (let ch = 0; ch < 3; ch++) {
     const w = new Float32Array(N), v = new Float32Array(N);
-    for (let i = 0; i < N; i++) { const k = keep[i] + 0.02; w[i] = k; v[i] = px[i * 4 + ch] * k; }
+    for (let i = 0; i < N; i++) { const hi = Math.max(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]); const k = keep[i] + (hi > 150 ? 0.03 : 0); w[i] = k + 1e-4; v[i] = px[i * 4 + ch] * w[i]; }
     const bw = boxBlur(w, MW, MH, 6, 2), bv = boxBlur(v, MW, MH, 6, 2);
     for (let i = 0; i < N; i++) sp[i * 4 + ch] = bv[i] / bw[i];
   }
@@ -210,12 +214,19 @@ function finalizeCutout() {
   sideTex.needsUpdate = true;
 }
 const CUT_VS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-const CUT_FS = `varying vec2 vUv; uniform sampler2D uMap; uniform sampler2D uMask; uniform sampler2D uSideMap; uniform vec2 uPx; uniform float uSide;
+const CUT_FS = `varying vec2 vUv; uniform sampler2D uMap; uniform sampler2D uMask; uniform sampler2D uSideMap; uniform sampler2D uInk; uniform float uClean; uniform vec2 uPx; uniform float uSide;
   void main(){
     vec3 k = texture2D(uMask, vUv).rgb;
     if (k.r < 0.02) discard;
     vec3 c = texture2D(uMap, vUv).rgb;
-    if (uSide > 0.5) { gl_FragColor = vec4(texture2D(uSideMap, vUv).rgb * 0.62, smoothstep(0.6, 0.75, k.g)); return; }
+    if (uSide > 0.5) { gl_FragColor = vec4(texture2D(uSideMap, vUv).rgb * 0.62, uClean > 0.5 ? k.r : smoothstep(0.6, 0.75, k.g)); return; }
+    if (uClean > 0.5) {   // printed lines in the camera image give way to the child's color; crisp lines go on top
+      vec3 sc = texture2D(uSideMap, vUv).rgb;
+      c = mix(c, sc, 1.0 - smoothstep(0.38, 0.62, max(c.r, max(c.g, c.b))));
+      // a thin white gap between the coloring and the line gets the color next to it
+      float edge = 1.0 - smoothstep(0.7, 0.93, k.g), white = smoothstep(0.72, 0.88, min(c.r, min(c.g, c.b)));
+      c = mix(c, sc, edge * white);
+    }
     // bevel: light from the top left falls on a rounded edge
     vec2 e = uPx * 3.0;
     vec2 n = vec2(texture2D(uMask, vUv + vec2(e.x, 0.0)).g - texture2D(uMask, vUv - vec2(e.x, 0.0)).g,
@@ -224,12 +235,13 @@ const CUT_FS = `varying vec2 vUv; uniform sampler2D uMap; uniform sampler2D uMas
     float rim = 1.0 - smoothstep(0.55, 1.0, k.g);
     c = c * (1.0 - 0.2 * rim) + vec3(max(0.0, lit)) * 0.3 - vec3(max(0.0, -lit)) * 0.22;
     c = mix(c, vec3(0.13, 0.1, 0.1), k.b * 0.9);                 // a clean drawn outline where the dots used to be
+    if (uClean > 0.5) { vec4 ik = texture2D(uInk, vUv); c = mix(c, ik.rgb, ik.a); }
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), k.r);
   }`;
 const LAYERS = 6, DEPTH = 0.014;   // thickness behind the cut-out, in page widths
 function cutMat(side) {
   return new THREE.ShaderMaterial({
-    uniforms: { uMap: { value: rt.texture }, uMask: { value: maskTex }, uSideMap: { value: sideTex }, uPx: { value: new THREE.Vector2(1 / RT_W, 1 / rt.height) }, uSide: { value: side ? 1 : 0 } },
+    uniforms: { uMap: { value: rt.texture }, uMask: { value: maskTex }, uSideMap: { value: sideTex }, uInk: { value: inkTex }, uClean: { value: CLEAN ? 1 : 0 }, uPx: { value: new THREE.Vector2(1 / RT_W, 1 / rt.height) }, uSide: { value: side ? 1 : 0 } },
     vertexShader: CUT_VS, fragmentShader: CUT_FS, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
   });
 }
@@ -821,6 +833,11 @@ async function startWith(stream) {
   bgMat.uniforms.uVideo.value = videoTex;
 
   if (!data) data = await (await fetch(SHEET.parts)).json();
+  if (data.clean && !inkTex) {   // a drawn character: fixed outline and lines, the camera only brings the colors
+    CLEAN = true;
+    inkTex = await new THREE.TextureLoader().loadAsync(`targets/${data.clean.ink}?v=1`);
+    inkTex.minFilter = THREE.LinearFilter; inkTex.generateMipmaps = false;
+  }
   if (controller) controller.stopProcessVideo();
   globalThis.__MINDAR_FOVY = FOV_OVERRIDE || (video.videoHeight >= video.videoWidth ? 64 : 50);
   controller = new window.MINDAR.IMAGE.Controller({
