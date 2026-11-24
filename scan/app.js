@@ -13,6 +13,8 @@ const params = new URLSearchParams(location.search);
 const sheetKey = NAMES[params.get('s')] ? params.get('s') : 'penguin';
 const paperSize = params.get('size') === 'letter' ? 'letter' : 'a4';
 const IS_ABC = sheetKey.startsWith('abc-');
+/* Name greeting from the letter boxes: off for now (handwriting on phone cameras isn't reliable enough). ?name=1 turns it on for testing. */
+const NAME_READING = new URLSearchParams(location.search).get('name') === '1';
 const SHEET = { name: NAMES[sheetKey], mind: `./targets/${sheetKey}-${paperSize}.js`, parts: `targets/${sheetKey}_${paperSize}.json` };
 
 const $ = id => document.getElementById(id);
@@ -121,11 +123,121 @@ function partGeometry(polys, origin) {
   g.translate(-origin.x, -origin.y, 0);
   return g;
 }
+/* cut-out: keep the child's coloring, drop the printed dots, numbers and white paper around the edge.
+   Worked out once on the CPU right after the capture, stored as R = alpha, G = soft alpha (bevel), B = drawn outline. */
+const BAND = 20;           // target px (150 dpi): soft edge zone where dots, numbers and paper get keyed out
+let maskTex = null, sideTex = null, polyFill = null, polySoft = null, MW = 0, MH = 0;
+function boxBlur(a, W, H, r, passes) {
+  let b = new Float32Array(W * H);
+  const pass = (inp, out, horiz) => {
+    const n = horiz ? W : H, m = horiz ? H : W, k = 1 / (2 * r + 1);
+    for (let j = 0; j < m; j++) {
+      const at = i => horiz ? j * W + Math.min(n - 1, Math.max(0, i)) : Math.min(n - 1, Math.max(0, i)) * W + j;
+      let acc = 0; for (let i = -r; i <= r; i++) acc += inp[at(i)];
+      for (let i = 0; i < n; i++) { out[horiz ? j * W + i : i * W + j] = acc * k; acc += inp[at(i + r + 1)] - inp[at(i - r)]; }
+    }
+  };
+  a = Float32Array.from(a);
+  for (let it = 0; it < passes; it++) { pass(a, b, true); pass(b, a, false); }
+  return a;
+}
+function writeMask(R, G, Bc) {
+  const px = maskTex.image.data;
+  for (let i = 0; i < MW * MH; i++) { const o = i * 4; px[o] = R[i] * 255; px[o + 1] = G[i] * 255; px[o + 2] = Bc[i] * 255; px[o + 3] = 255; }
+  maskTex.needsUpdate = true;
+}
+function buildMask() {
+  const [x0, y0, x1, y1] = data.region; MW = RT_W; MH = rt.height; const s = MW / (x1 - x0);
+  const c = document.createElement('canvas'); c.width = MW; c.height = MH;
+  const g = c.getContext('2d'); g.fillStyle = '#fff';
+  const polys = [...data.body, ...data.parts.flatMap(p => p.polys)];
+  for (const poly of polys) { g.beginPath(); poly.forEach(([x, y], i) => g[i ? 'lineTo' : 'moveTo']((x - x0) * s, (y - y0) * s)); g.closePath(); g.fill(); }
+  const src = g.getImageData(0, 0, MW, MH).data;
+  polyFill = new Float32Array(MW * MH);
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) polyFill[j * MW + i] = src[((MH - 1 - j) * MW + i) * 4] / 255;  // texture row 0 = bottom
+  const sigma = BAND * s, r = Math.max(1, Math.round((Math.sqrt(4 * sigma * sigma + 1) - 1) / 2));
+  polySoft = boxBlur(polyFill, MW, MH, r, 3);
+  maskTex = new THREE.DataTexture(new Uint8Array(MW * MH * 4), MW, MH, THREE.RGBAFormat);
+  maskTex.minFilter = maskTex.magFilter = THREE.LinearFilter;
+  sideTex = new THREE.DataTexture(new Uint8Array(MW * MH * 4).fill(150), MW, MH, THREE.RGBAFormat);
+  sideTex.minFilter = sideTex.magFilter = THREE.LinearFilter; sideTex.needsUpdate = true;
+  const inner = polySoft.map(v => v > 0.98 ? 1 : 0);
+  writeMask(inner, boxBlur(inner, MW, MH, 4, 2), new Float32Array(MW * MH));
+}
+function finalizeCutout() {
+  const N = MW * MH, px = new Uint8Array(N * 4);
+  renderer.readRenderTargetPixels(rt, 0, 0, MW, MH, px);
+  const keep = new Float32Array(N), open = new Uint8Array(N);
+  for (let i = 0; i < N; i++) {
+    const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2], hi = Math.max(r, g, b), chroma = hi - Math.min(r, g, b);
+    keep[i] = Math.min(1, Math.max(0, (chroma - 20) / 30)) * Math.min(1, Math.max(0, (hi - 95) / 50));  // crayon, not ink
+    open[i] = hi > 165 && chroma < 30 ? 1 : 0;                                                       // bare paper
+  }
+  // flood the bare paper in from outside the outline: white the child left open inside the drawing stays,
+  // white that leaks out between the dots goes
+  const out = new Uint8Array(N), q = new Int32Array(N); let qh = 0, qt = 0;
+  for (let i = 0; i < N; i++) if (polyFill[i] < 0.5) { out[i] = 1; q[qt++] = i; }
+  while (qh < qt) {
+    const i = q[qh++], x = i % MW, y = (i / MW) | 0;
+    const nb = [x > 0 ? i - 1 : -1, x < MW - 1 ? i + 1 : -1, y > 0 ? i - MW : -1, y < MH - 1 ? i + MW : -1];
+    for (const j of nb) if (j >= 0 && !out[j] && open[j]) { out[j] = 1; q[qt++] = j; }
+  }
+  // the printed dots and numbers sit right against that paper: drop anything uncolored next to it
+  const near = boxBlur(Float32Array.from(out), MW, MH, Math.max(2, Math.round(RT_W / (data.region[2] - data.region[0]) * 11)), 1);
+  const keepAvg = boxBlur(keep, MW, MH, 3, 2);
+  const alpha0 = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    if (out[i]) continue;
+    alpha0[i] = near[i] > 0.01 ? Math.min(1, Math.max(0, (keepAvg[i] - 0.3) / 0.25)) : 1;
+  }
+  const sm = boxBlur(alpha0, MW, MH, 3, 2);                       // round off the bites the dots leave
+  const alpha = sm.map(v => Math.min(1, Math.max(0, (v - 0.5) / 0.15)));
+  const nearEdge = boxBlur(alpha, MW, MH, 2, 2);
+  const ink = alpha.map((v, i) => v * Math.min(1, Math.max(0, (0.97 - nearEdge[i]) / 0.2)));
+  writeMask(alpha, boxBlur(alpha, MW, MH, 4, 2), ink);
+  // the cut-out's thickness: the child's colors smoothed, without the printed lines
+  const sp = sideTex.image.data;
+  for (let ch = 0; ch < 3; ch++) {
+    const w = new Float32Array(N), v = new Float32Array(N);
+    for (let i = 0; i < N; i++) { const k = keep[i] + 0.02; w[i] = k; v[i] = px[i * 4 + ch] * k; }
+    const bw = boxBlur(w, MW, MH, 6, 2), bv = boxBlur(v, MW, MH, 6, 2);
+    for (let i = 0; i < N; i++) sp[i * 4 + ch] = bv[i] / bw[i];
+  }
+  for (let i = 0; i < N; i++) sp[i * 4 + 3] = 255;
+  sideTex.needsUpdate = true;
+}
+const CUT_VS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const CUT_FS = `varying vec2 vUv; uniform sampler2D uMap; uniform sampler2D uMask; uniform sampler2D uSideMap; uniform vec2 uPx; uniform float uSide;
+  void main(){
+    vec3 k = texture2D(uMask, vUv).rgb;
+    if (k.r < 0.02) discard;
+    vec3 c = texture2D(uMap, vUv).rgb;
+    if (uSide > 0.5) { gl_FragColor = vec4(texture2D(uSideMap, vUv).rgb * 0.62, k.r); return; }
+    // bevel: light from the top left falls on a rounded edge
+    vec2 e = uPx * 3.0;
+    vec2 n = vec2(texture2D(uMask, vUv + vec2(e.x, 0.0)).g - texture2D(uMask, vUv - vec2(e.x, 0.0)).g,
+                  texture2D(uMask, vUv + vec2(0.0, e.y)).g - texture2D(uMask, vUv - vec2(0.0, e.y)).g);
+    float lit = dot(n, normalize(vec2(1.0, -1.0))) * 2.0;
+    float rim = 1.0 - smoothstep(0.55, 1.0, k.g);
+    c = c * (1.0 - 0.2 * rim) + vec3(max(0.0, lit)) * 0.3 - vec3(max(0.0, -lit)) * 0.22;
+    c = mix(c, vec3(0.13, 0.1, 0.1), k.b * 0.9);                 // a clean drawn outline where the dots used to be
+    gl_FragColor = vec4(clamp(c, 0.0, 1.0), k.r);
+  }`;
+const LAYERS = 6, DEPTH = 0.014;   // thickness behind the cut-out, in page widths
+function cutMat(side) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uMap: { value: rt.texture }, uMask: { value: maskTex }, uSideMap: { value: sideTex }, uPx: { value: new THREE.Vector2(1 / RT_W, 1 / rt.height) }, uSide: { value: side ? 1 : 0 } },
+    vertexShader: CUT_VS, fragmentShader: CUT_FS, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+  });
+}
 function partMesh(polys, origin, order) {
-  const m = new THREE.Mesh(partGeometry(polys, origin),
-    new THREE.MeshBasicMaterial({ map: rt.texture, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
-  m.renderOrder = order;
-  return m;
+  const geo = partGeometry(polys, origin), grp = new THREE.Group();
+  const side = cutMat(true);
+  for (let i = LAYERS; i >= 1; i--) {             // stacked copies behind = a thick, chunky cut-out
+    const l = new THREE.Mesh(geo, side); l.position.z = -DEPTH * i / LAYERS; l.renderOrder = 3; grp.add(l);
+  }
+  const m = new THREE.Mesh(geo, cutMat(false)); m.renderOrder = order; grp.add(m);
+  return grp;
 }
 function dot(r, color, opacity) {
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -166,6 +278,7 @@ function buildCharacter() {
   const pg = new THREE.ShapeGeometry(sil.map(poly => new THREE.Shape(grow(poly).map(([x, y]) => toLocal(x, y)))));
   patch = new THREE.Mesh(pg, patchMat);
   patch.position.z = 0.0005; patch.renderOrder = 1;
+  patch.visible = false;   // the printed drawing stays on the paper; a thick copy pops out of it
   anchor.add(patch);
 
   const sw = (data.region[2] - data.region[0]) * scaleT() / mw;
@@ -174,6 +287,7 @@ function buildCharacter() {
   anchor.add(shadow);
 
 
+  buildMask();
   bodyG.add(partMesh(data.body, BP, 6));
   for (const p of data.parts) {
     const o = toLocal(...p.pivot), parentOrigin = p.parent === 'root' ? B : BP;
@@ -624,7 +738,7 @@ function animate(now) {
   if (state === 'scanning' && tracked) setState(hasTexture ? 'alive' : 'capturing');
   if (state === 'capturing') {
     if (!tracked) { setState('scanning'); }
-    else { extract(); if (now - stateT > 1300) { hasTexture = true; setState('alive'); readName(); } }
+    else { extract(); if (now - stateT > 1300) { hasTexture = true; finalizeCutout(); setState('alive'); if (NAME_READING) readName(); } }
   }
   if (state === 'alive' && !visible) setState('scanning');
 
@@ -642,6 +756,7 @@ function animate(now) {
     root.rotation.x = standAngle * TOON.stand;
     root.position.z = 0.002 + 0.05 * Math.min(1, TOON.stand);
     root.scale.setScalar(1.07);
+    root.rotation.y = 0.28 * Math.sin(t * 0.9) * Math.min(1, TOON.stand);   // a slow turn shows off the thickness
     root.visible = true; shadow.visible = true;
     patchMat.uniforms.uOpacity.value = Math.min(0.96, popT * 2);
     const d = Math.min(1, Math.max(0, popT - 0.4) / 0.6), beat = t * 2 * Math.PI * 1.15;
@@ -725,7 +840,7 @@ async function startWith(stream) {
   [mw, mh] = dimensions[0];
   postMatrix.compose(new THREE.Vector3(mw / 2, mw / 2 + (mh - mw) / 2, 0), new THREE.Quaternion(), new THREE.Vector3(mw, mw, mw));
   if (!rt) { buildExtraction(); buildCharacter(); buildWatermark(); buildNameReader(); }
-  if (data.nameBoxes) loadOCR();
+  if (data.nameBoxes && NAME_READING) loadOCR();
   else { extractMat.uniforms.uVideo.value = videoTex; patchMat.uniforms.uVideo.value = videoTex; }
   resize();
   await controller.dummyRun(video);
