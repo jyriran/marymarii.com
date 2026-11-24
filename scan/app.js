@@ -7,9 +7,12 @@ const FOV_OVERRIDE = Number(new URLSearchParams(location.search).get('fov')) || 
 /* ---------- sheet config: each QR code opens ?s=<sheet> (and &size=letter on US Letter pages) ---------- */
 const NAMES = { hedgehog: 'Hedgehog', gift: 'Gift Box', bell: 'Bell', stocking: 'Stocking', snowman: 'Snowman', gingerbread: 'Gingerbread Man',
   penguin: 'Penguin', tree: 'Christmas Tree', owl: 'Owl', santa: 'Santa', house: 'Gingerbread House', bunny: 'Bunny', fox: 'Fox', reindeer: 'Reindeer', bear: 'Polar Bear' };
+/* ABC Dot to Dot pages: ?s=abc-a … abc-z */
+Object.assign(NAMES, {'abc-a': 'Alligator', 'abc-b': 'Bear', 'abc-c': 'Cat', 'abc-d': 'Dog', 'abc-e': 'Elephant', 'abc-f': 'Fish', 'abc-g': 'Giraffe', 'abc-h': 'Hippo', 'abc-i': 'Iguana', 'abc-j': 'Jellyfish', 'abc-k': 'Koala', 'abc-l': 'Lion', 'abc-m': 'Mouse', 'abc-n': 'Narwhal', 'abc-o': 'Octopus', 'abc-p': 'Pig', 'abc-q': 'Quail', 'abc-r': 'Rabbit', 'abc-s': 'Snake', 'abc-t': 'Turtle', 'abc-u': 'Unicorn', 'abc-v': 'Vulture', 'abc-w': 'Whale', 'abc-x': 'X-ray Fish', 'abc-y': 'Yak', 'abc-z': 'Zebra'});
 const params = new URLSearchParams(location.search);
 const sheetKey = NAMES[params.get('s')] ? params.get('s') : 'penguin';
 const paperSize = params.get('size') === 'letter' ? 'letter' : 'a4';
+const IS_ABC = sheetKey.startsWith('abc-');
 const SHEET = { name: NAMES[sheetKey], mind: `./targets/${sheetKey}-${paperSize}.js`, parts: `targets/${sheetKey}_${paperSize}.json` };
 
 const $ = id => document.getElementById(id);
@@ -207,7 +210,7 @@ function buildCharacter() {
   const sx = sc.getContext('2d'); const grd = sx.createRadialGradient(16, 16, 0, 16, 16, 16);
   grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.5, 'rgba(255,255,255,.8)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
   sx.fillStyle = grd; sx.fillRect(0, 0, 32, 32);
-  snow = new THREE.Points(sg, new THREE.PointsMaterial({ size: 0.034, color: 0x9fd3ff, map: new THREE.CanvasTexture(sc), transparent: true, depthTest: false, depthWrite: false, opacity: 0 }));
+  snow = new THREE.Points(sg, new THREE.PointsMaterial({ size: IS_ABC ? 0.028 : 0.034, color: IS_ABC ? 0xffd34d : 0x9fd3ff, map: new THREE.CanvasTexture(sc), transparent: true, depthTest: false, depthWrite: false, opacity: 0 }));
   snow.userData.seed = seed; snow.renderOrder = 10; snow.frustumCulled = false;
   root.add(snow);
   root.visible = false; shadow.visible = false;

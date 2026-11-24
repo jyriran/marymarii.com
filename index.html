@@ -269,6 +269,16 @@ dialog img { width: 100%; height: auto; }
   .steps::before, .bundle, .phone, .phone .view img, .next .mark, .hero-par { transform: none !important; }
   .bundle { border-radius: 34px; }
 }
+.abc-sets { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 26px; max-width: 760px; margin: 30px auto 0; }
+.abc-set { display: block; background: #fff; border: 3px solid var(--ink); border-radius: 22px; overflow: hidden; box-shadow: 0 8px 0 var(--ink); text-decoration: none; color: var(--ink); transition: transform .15s; }
+.abc-set:hover { transform: translateY(-4px) rotate(-.6deg); }
+.abc-set img { width: 100%; height: auto; display: block; border-bottom: 3px solid var(--ink); }
+.abc-set span { display: block; padding: 14px 18px; font-size: .95rem; }
+.abc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; margin-top: 34px; }
+.abc-tile { margin: 0; background: #fff; border-radius: 16px; padding: 8px 6px 6px; text-align: center; box-shadow: 0 0 0 2px var(--grid); }
+.abc-tile img { width: 100%; height: auto; display: block; }
+.abc-tile figcaption { font-size: .78rem; color: var(--muted); }
+.abc-tile b { color: var(--ink); font-size: 1rem; }
 </style>
 </head>
 <body>
@@ -278,6 +288,7 @@ dialog img { width: 100%; height: auto; }
   <nav class="nav-links" aria-label="Main">
     <a href="#how">How it works</a>
     <a href="#bundle">Christmas bundle</a>
+    <a href="#abc">ABC sets</a>
     <a href="#faq">Questions</a>
     <a href="scan/index.html?s=penguin">Magic camera</a>
     <a class="btn small" data-shop href="https://marymariiart.etsy.com">Etsy shop ↗</a>
@@ -409,7 +420,7 @@ dialog img { width: 100%; height: auto; }
 
   <section class="wrap" id="bundle" aria-labelledby="bundle-title">
     <div class="bundle" data-p>
-      <span class="chip" id="bundle-chip">Coming soon to Etsy</span>
+      <span class="chip" id="bundle-chip">Now on Etsy</span>
       <h2 id="bundle-title">Christmas Dot to Dot</h2>
       <p class="lede" style="margin-top:14px">Fifteen festive sheets, ordered from easy to challenging. Tap a sheet to see the whole page.</p>
       <div class="bundle-meta"><span>15 activity sheets</span><span>30 to 73 dots</span><span>A4 + US Letter PDFs</span><span>Black &amp; white friendly</span><span>Difficulty stars on every page</span></div>
@@ -422,10 +433,23 @@ dialog img { width: 100%; height: auto; }
       </div>
       <div class="grid" id="grid"></div>
       <div class="bundle-cta">
-        <a class="btn primary" id="bundle-btn" data-shop href="https://marymariiart.etsy.com">Visit our Etsy shop ↗</a>
-        <p id="bundle-note">The bundle is being finished now. Visit the shop to favorite it and see it when it's listed.</p>
+        <a class="btn primary" id="bundle-btn" href="https://www.etsy.com/listing/4623775202">Get the Christmas bundle on Etsy ↗</a>
+        <p id="bundle-note">Instant download · A4 + US Letter · print as often as you like for your family.</p>
       </div>
     </div>
+  </section>
+
+
+  <section class="wrap section" id="abc" aria-labelledby="abc-title">
+    <div class="section-head">
+      <h2 id="abc-title">ABC Dot to Dot <span class="chip" style="background:var(--red);color:#fff;vertical-align:middle;font-size:1rem">New</span></h2>
+      <p class="lede">Learn the alphabet the fun way. Each page: trace a big capital and lowercase letter in the right stroke order, practice on handwriting lines, connect the dots on a friendly animal, then scan it and watch it come alive. Ages 3–6.</p></div>
+    <div class="abc-sets">
+      <a class="abc-set" data-shop href="https://marymariiart.etsy.com"><img src="img/abc/cover-am.jpg" alt="ABC Dot to Dot A to M cover" width="331" height="468" loading="lazy"><span><b>Letters A to M</b><br>13 pages · Alligator to Mouse</span></a>
+      <a class="abc-set" data-shop href="https://marymariiart.etsy.com"><img src="img/abc/cover-nz.jpg" alt="ABC Dot to Dot N to Z cover" width="331" height="468" loading="lazy"><span><b>Letters N to Z</b><br>13 pages · Narwhal to Zebra</span></a>
+    </div>
+    <div class="abc-grid"><figure class="abc-tile"><img src="img/abc/a.jpg" alt="Alligator" width="120" height="120" loading="lazy"><figcaption><b>A</b> Alligator</figcaption></figure><figure class="abc-tile"><img src="img/abc/b.jpg" alt="Bear" width="120" height="120" loading="lazy"><figcaption><b>B</b> Bear</figcaption></figure><figure class="abc-tile"><img src="img/abc/c.jpg" alt="Cat" width="120" height="120" loading="lazy"><figcaption><b>C</b> Cat</figcaption></figure><figure class="abc-tile"><img src="img/abc/d.jpg" alt="Dog" width="120" height="120" loading="lazy"><figcaption><b>D</b> Dog</figcaption></figure><figure class="abc-tile"><img src="img/abc/e.jpg" alt="Elephant" width="120" height="120" loading="lazy"><figcaption><b>E</b> Elephant</figcaption></figure><figure class="abc-tile"><img src="img/abc/f.jpg" alt="Fish" width="120" height="120" loading="lazy"><figcaption><b>F</b> Fish</figcaption></figure><figure class="abc-tile"><img src="img/abc/g.jpg" alt="Giraffe" width="120" height="120" loading="lazy"><figcaption><b>G</b> Giraffe</figcaption></figure><figure class="abc-tile"><img src="img/abc/h.jpg" alt="Hippo" width="120" height="120" loading="lazy"><figcaption><b>H</b> Hippo</figcaption></figure><figure class="abc-tile"><img src="img/abc/i.jpg" alt="Iguana" width="120" height="120" loading="lazy"><figcaption><b>I</b> Iguana</figcaption></figure><figure class="abc-tile"><img src="img/abc/j.jpg" alt="Jellyfish" width="120" height="120" loading="lazy"><figcaption><b>J</b> Jellyfish</figcaption></figure><figure class="abc-tile"><img src="img/abc/k.jpg" alt="Koala" width="120" height="120" loading="lazy"><figcaption><b>K</b> Koala</figcaption></figure><figure class="abc-tile"><img src="img/abc/l.jpg" alt="Lion" width="120" height="120" loading="lazy"><figcaption><b>L</b> Lion</figcaption></figure><figure class="abc-tile"><img src="img/abc/m.jpg" alt="Mouse" width="120" height="120" loading="lazy"><figcaption><b>M</b> Mouse</figcaption></figure><figure class="abc-tile"><img src="img/abc/n.jpg" alt="Narwhal" width="120" height="120" loading="lazy"><figcaption><b>N</b> Narwhal</figcaption></figure><figure class="abc-tile"><img src="img/abc/o.jpg" alt="Octopus" width="120" height="120" loading="lazy"><figcaption><b>O</b> Octopus</figcaption></figure><figure class="abc-tile"><img src="img/abc/p.jpg" alt="Pig" width="120" height="120" loading="lazy"><figcaption><b>P</b> Pig</figcaption></figure><figure class="abc-tile"><img src="img/abc/q.jpg" alt="Quail" width="120" height="120" loading="lazy"><figcaption><b>Q</b> Quail</figcaption></figure><figure class="abc-tile"><img src="img/abc/r.jpg" alt="Rabbit" width="120" height="120" loading="lazy"><figcaption><b>R</b> Rabbit</figcaption></figure><figure class="abc-tile"><img src="img/abc/s.jpg" alt="Snake" width="120" height="120" loading="lazy"><figcaption><b>S</b> Snake</figcaption></figure><figure class="abc-tile"><img src="img/abc/t.jpg" alt="Turtle" width="120" height="120" loading="lazy"><figcaption><b>T</b> Turtle</figcaption></figure><figure class="abc-tile"><img src="img/abc/u.jpg" alt="Unicorn" width="120" height="120" loading="lazy"><figcaption><b>U</b> Unicorn</figcaption></figure><figure class="abc-tile"><img src="img/abc/v.jpg" alt="Vulture" width="120" height="120" loading="lazy"><figcaption><b>V</b> Vulture</figcaption></figure><figure class="abc-tile"><img src="img/abc/w.jpg" alt="Whale" width="120" height="120" loading="lazy"><figcaption><b>W</b> Whale</figcaption></figure><figure class="abc-tile"><img src="img/abc/x.jpg" alt="X-ray Fish" width="120" height="120" loading="lazy"><figcaption><b>X</b> X-ray Fish</figcaption></figure><figure class="abc-tile"><img src="img/abc/y.jpg" alt="Yak" width="120" height="120" loading="lazy"><figcaption><b>Y</b> Yak</figcaption></figure><figure class="abc-tile"><img src="img/abc/z.jpg" alt="Zebra" width="120" height="120" loading="lazy"><figcaption><b>Z</b> Zebra</figcaption></figure></div>
+    <p style="text-align:center;margin-top:28px"><a class="btn primary" data-shop href="https://marymariiart.etsy.com">See the ABC sets on Etsy ↗</a></p>
   </section>
 
   <section class="wrap section" aria-labelledby="who-title">
@@ -474,7 +498,7 @@ dialog img { width: 100%; height: auto; }
   <section class="wrap next" aria-labelledby="next-title">
     <img class="mark" data-p src="brand/mark-ink.png" alt="" width="78" height="78" loading="lazy">
     <h2 id="next-title">More bundles on the way</h2>
-    <p>Each bundle has 15 sheets on one theme. Favorite the shop on Etsy to see new ones first.</p>
+    <p>New themes are coming. Favorite the shop on Etsy to see new bundles first.</p>
     <a class="btn primary" data-shop href="https://marymariiart.etsy.com">Favorite MaryMariiArt on Etsy ↗</a>
   </section>
 </main>
@@ -584,7 +608,7 @@ play();
     h.classList.add("split");
   });
   // extra reveal targets
-  document.querySelectorAll(".section-head .lede, #bundle .lede, .bundle-meta, .filters, .bundle-cta, .faq details, .ar .lede, .ar .btn, .next p, .next .btn")
+  document.querySelectorAll(".section-head .lede, #bundle .lede, .abc-set, .abc-tile, .bundle-meta, .filters, .bundle-cta, .faq details, .ar .lede, .ar .btn, .next p, .next .btn")
     .forEach((el, i) => { el.classList.add("rv"); });
   document.querySelectorAll(".faq details").forEach((el, i) => el.style.setProperty("--d", i % 8));
   document.querySelectorAll(".checks li").forEach((el, i) => el.style.setProperty("--d", i));
