@@ -170,9 +170,12 @@ function finalizeCutout() {
   const keep = new Float32Array(N), open = new Uint8Array(N);
   for (let i = 0; i < N; i++) {
     const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2], hi = Math.max(r, g, b), chroma = hi - Math.min(r, g, b);
-    keep[i] = Math.min(1, Math.max(0, (chroma - 20) / 30)) * Math.min(1, Math.max(0, (hi - 95) / 50));  // crayon, not ink
-    open[i] = hi > 165 && chroma < 30 ? 1 : 0;                                                       // bare paper
+    keep[i] = Math.min(1, Math.max(0, (chroma - 12) / 24)) * Math.min(1, Math.max(0, (hi - 95) / 50));  // crayon (even pale pink), not ink
+    open[i] = hi > 165 && chroma < 22 ? 1 : 0;                                                       // bare paper
   }
+  // crayon strokes leave little white gaps: only paper with no coloring nearby counts as open
+  const keepAvg = boxBlur(keep, MW, MH, 4, 2);
+  for (let i = 0; i < N; i++) if (keepAvg[i] > 0.12) open[i] = 0;
   // flood the bare paper in from outside the outline: white the child left open inside the drawing stays,
   // white that leaks out between the dots goes
   const out = new Uint8Array(N), q = new Int32Array(N); let qh = 0, qt = 0;
@@ -184,7 +187,6 @@ function finalizeCutout() {
   }
   // the printed dots and numbers sit right against that paper: drop anything uncolored next to it
   const near = boxBlur(Float32Array.from(out), MW, MH, Math.max(2, Math.round(RT_W / (data.region[2] - data.region[0]) * 11)), 1);
-  const keepAvg = boxBlur(keep, MW, MH, 4, 2);
   const alpha0 = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     if (out[i]) continue;
