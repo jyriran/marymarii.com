@@ -175,7 +175,8 @@ function finalizeCutout() {
   }
   // crayon strokes leave little white gaps: only paper with no coloring nearby counts as open
   const keepAvg = boxBlur(keep, MW, MH, 4, 2);
-  for (let i = 0; i < N; i++) if (keepAvg[i] > 0.12) open[i] = 0;
+  // and only near the outline: deep inside the drawing nothing is ever cut away
+  for (let i = 0; i < N; i++) if (keepAvg[i] > 0.12 || polySoft[i] > 0.97) open[i] = 0;
   // flood the bare paper in from outside the outline: white the child left open inside the drawing stays,
   // white that leaks out between the dots goes
   const out = new Uint8Array(N), q = new Int32Array(N); let qh = 0, qt = 0;
@@ -190,7 +191,7 @@ function finalizeCutout() {
   const alpha0 = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     if (out[i]) continue;
-    alpha0[i] = near[i] > 0.01 ? Math.min(1, Math.max(0, (keepAvg[i] - 0.3) / 0.25)) : 1;
+    alpha0[i] = near[i] > 0.01 && polySoft[i] < 0.97 ? Math.min(1, Math.max(0, (keepAvg[i] - 0.3) / 0.25)) : 1;
   }
   const sm = boxBlur(alpha0, MW, MH, 6, 3);                       // round off the bites the dots leave: smooth, flowing edge
   const alpha = sm.map(v => Math.min(1, Math.max(0, (v - 0.5) / 0.08 + 0.5)));
