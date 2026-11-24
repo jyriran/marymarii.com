@@ -10,9 +10,12 @@ const NAMES = { hedgehog: 'Hedgehog', gift: 'Gift Box', bell: 'Bell', stocking: 
 /* ABC Dot to Dot pages: ?s=abc-a … abc-z */
 Object.assign(NAMES, {'abc-a': 'Alligator', 'abc-b': 'Bear', 'abc-c': 'Cat', 'abc-d': 'Dog', 'abc-e': 'Elephant', 'abc-f': 'Fish', 'abc-g': 'Giraffe', 'abc-h': 'Hippo', 'abc-i': 'Iguana', 'abc-j': 'Jellyfish', 'abc-k': 'Koala', 'abc-l': 'Lion', 'abc-m': 'Mouse', 'abc-n': 'Narwhal', 'abc-o': 'Octopus', 'abc-p': 'Pig', 'abc-q': 'Quail', 'abc-r': 'Rabbit', 'abc-s': 'Snake', 'abc-t': 'Turtle', 'abc-u': 'Unicorn', 'abc-v': 'Vulture', 'abc-w': 'Whale', 'abc-x': 'X-ray Fish', 'abc-y': 'Yak', 'abc-z': 'Zebra'});
 const params = new URLSearchParams(location.search);
+/* 123 Count & Connect: ?s=n1 … n20 */
+Object.assign(NAMES, {'n1': 'Dinosaur', 'n2': 'Duck', 'n3': 'Crab', 'n4': 'Ladybug', 'n5': 'Bee', 'n6': 'Snail', 'n7': 'Frog', 'n8': 'Panda', 'n9': 'Monkey', 'n10': 'Cow', 'n11': 'Sheep', 'n12': 'Chick', 'n13': 'Butterfly', 'n14': 'Dolphin', 'n15': 'Seal', 'n16': 'Flamingo', 'n17': 'Squirrel', 'n18': 'Parrot', 'n19': 'Tiger', 'n20': 'Dragon'});
 const sheetKey = NAMES[params.get('s')] ? params.get('s') : 'penguin';
 const paperSize = params.get('size') === 'letter' ? 'letter' : 'a4';
 const IS_ABC = sheetKey.startsWith('abc-');
+const IS_123 = /^n\d+$/.test(sheetKey);
 /* Name greeting from the letter boxes: off for now (handwriting on phone cameras isn't reliable enough). ?name=1 turns it on for testing. */
 const NAME_READING = new URLSearchParams(location.search).get('name') === '1';
 const SHEET = { name: NAMES[sheetKey], mind: `./targets/${sheetKey}-${paperSize}.js`, parts: `targets/${sheetKey}_${paperSize}.json` };
@@ -339,7 +342,7 @@ function buildCharacter() {
   const sx = sc.getContext('2d'); const grd = sx.createRadialGradient(16, 16, 0, 16, 16, 16);
   grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.5, 'rgba(255,255,255,.8)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
   sx.fillStyle = grd; sx.fillRect(0, 0, 32, 32);
-  snow = new THREE.Points(sg, new THREE.PointsMaterial({ size: IS_ABC ? 0.028 : 0.034, color: IS_ABC ? 0xffd34d : 0x9fd3ff, map: new THREE.CanvasTexture(sc), transparent: true, depthTest: false, depthWrite: false, opacity: 0 }));
+  snow = new THREE.Points(sg, new THREE.PointsMaterial({ size: IS_ABC || IS_123 ? 0.028 : 0.034, color: IS_ABC ? 0xffd34d : IS_123 ? 0xff9ec4 : 0x9fd3ff, map: new THREE.CanvasTexture(sc), transparent: true, depthTest: false, depthWrite: false, opacity: 0 }));
   snow.userData.seed = seed; snow.renderOrder = 10; snow.frustumCulled = false;
   root.add(snow);
   root.visible = false; shadow.visible = false;
@@ -640,7 +643,7 @@ function setState(s) {
   mg.hidden = s !== 'capturing';
   mg.classList.remove('run'); if (s === 'capturing') { void mg.offsetWidth; mg.classList.add('run'); }
   $('rec').disabled = !(s === 'alive');
-  if (s === 'alive') { popT = 0; resetToon(); }
+  if (s === 'alive') { popT = 0; resetToon(); countDone = false; counters.forEach(sp => root.remove(sp)); counters = []; }
 }
 
 const easeOutBack = t => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
@@ -693,6 +696,39 @@ const ACTS = {
   boing:  { dur: 1.2, f(t, a) { if (t < 0.12) TOON.sT = -0.15; else if (!a.done) { a.done = 1; TOON.sT = 0; TOON.vs += 5.5; } } },
   jingle: { dur: 1.1, f(t) { TOON.rT = 0.12 * Math.sin(t * 2 * Math.PI * 5) * Math.sin(t * Math.PI / 1.1); } },
 };
+/* 123 pages: the animal hops once per number and a counter pops up above it: 1, 2, 3 … */
+let counters = [], countDone = false;
+const countStep = n => n > 10 ? 0.42 : 0.6;
+function counterSprite(k) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#fffcf6'; g.strokeStyle = '#2a1c15'; g.lineWidth = 9; g.beginPath(); g.arc(64, 64, 54, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.fillStyle = '#2a1c15'; g.font = `800 ${k >= 10 ? 58 : 72}px Gluten, Figtree, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(k), 64, 70);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 12; return sp;
+}
+function popCounter(k) {
+  if (!data.top) return;
+  const T = toLocal(...data.top), sp = counterSprite(k);
+  const n = data.count, per = Math.min(n, 10), gap = n > 5 ? 0.056 : 0.07;
+  const col = (k - 1) % 10, row = Math.floor((k - 1) / 10);
+  sp.position.set(T.x - B.x + (col - (per - 1) / 2) * gap, T.y - B.y + 0.04 + row * 0.06, 0.02);
+  const step = countStep(n); sp.userData = { t: 0, life: (n - k + 1) * step / SLOW + 1.6 }; sp.scale.setScalar(0.001); root.add(sp); counters.push(sp);
+}
+function stepCounters(dt) {
+  for (const sp of counters) {
+    const u = sp.userData; u.t += dt;
+    const grow = Math.min(1, u.t / 0.25), s = (data.count > 5 ? 0.052 : 0.068) * (grow < 1 ? 1.25 * Math.sin(grow * Math.PI / 2) : 1 + 0.25 * Math.max(0, 1 - (u.t - 0.25) / 0.2));
+    sp.scale.setScalar(s);
+    sp.material.opacity = u.t > u.life ? Math.max(0, 1 - (u.t - u.life) / 0.6) : 1;   // all numbers stay until the count is done, then fade
+  }
+  counters = counters.filter(sp => { if (sp.material.opacity <= 0) { root.remove(sp); return false; } return true; });
+}
+ACTS.count = { dur: 1, f(t, a) {
+  const n = data.count, step = countStep(n); a.k = a.k || 0;
+  if (a.k < n && t >= 0.35 + a.k * step) { a.k++; TOON.sT = 0; launch(0.03); popCounter(a.k); }
+  else if (a.k < n && t >= 0.35 + a.k * step - 0.12) TOON.sT = -0.18;
+  ACTS.count.dur = 0.35 + n * step + 0.6;
+} };
 const HOPPER = ['hop', 'wiggle', 'hop2', 'tilt', 'hop', 'bigspin', 'yawn', 'wiggle'];
 const HANGER = ['swing', 'jingle', 'boing', 'swing'];
 function stepToon(dt, t) {
@@ -701,7 +737,8 @@ function stepToon(dt, t) {
   if (!TOON.act) {
     TOON.rest -= dt;
     TOON.sT = 0.018 * Math.sin(t * 2 * Math.PI * 0.9); TOON.kT = 0.03 * Math.sin(t * 2 * Math.PI * 0.45); TOON.rT = 0;
-    if (TOON.joy && !hanging) { TOON.joy = false; TOON.act = { name: 'joy', t: 0 }; }
+    if (data.count && !countDone && !hanging) { countDone = true; TOON.act = { name: 'count', t: 0 }; }
+    else if (TOON.joy && !hanging) { TOON.joy = false; TOON.act = { name: 'joy', t: 0 }; }
     else if (TOON.rest <= 0) {
       const list = hanging ? HANGER : HOPPER; let name;
       do { name = list[Math.floor(Math.random() * list.length)]; } while (name === TOON.lastAct && list.length > 1);
@@ -766,6 +803,7 @@ function animate(now) {
   if (state === 'alive') {
     popT = Math.min(1, popT + dt / 0.9);
     stepToon(dt * SLOW, t * SLOW);
+    stepCounters(dt);
     // stand up facing the phone, on a spring so it overshoots and settles like a cartoon
     inv.copy(anchorS).invert(); camLocal.set(0, 0, 0).applyMatrix4(inv);
     const target = THREE.MathUtils.clamp(Math.atan2(-(camLocal.y - B.y), camLocal.z), 0.3, 1.35);
