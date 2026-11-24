@@ -838,7 +838,7 @@ async function startWith(stream) {
   if (!data) data = await (await fetch(SHEET.parts)).json();
   if (data.clean && !inkTex) {   // a drawn character: fixed outline and lines, the camera only brings the colors
     CLEAN = true;
-    inkTex = await new THREE.TextureLoader().loadAsync(`targets/${data.clean.ink}?v=2`);
+    inkTex = await new THREE.TextureLoader().loadAsync(`targets/${data.clean.ink}?v=3`);
     inkTex.minFilter = THREE.LinearFilter; inkTex.generateMipmaps = false;
   }
   if (controller) controller.stopProcessVideo();
