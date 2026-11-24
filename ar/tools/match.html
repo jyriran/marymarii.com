@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8">
+<script type="module">
+import '../node_modules/mind-ar/dist/mindar-image.prod.js';
+import tgt from '../app/targets/penguin-target.js';
+const bin = Uint8Array.from(atob(tgt), c => c.charCodeAt(0));
+const url = URL.createObjectURL(new Blob([bin]));
+async function test(src, W, H) {
+  const img = new Image(); img.src = src; await img.decode();
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'); g.fillStyle = '#7a5a3a'; g.fillRect(0, 0, W, H);
+  const s = Math.min(W / img.width, H / img.height) * 0.9; const w = img.width * s, h = img.height * s;
+  g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+  const c = new window.MINDAR.IMAGE.Controller({ inputWidth: W, inputHeight: H, maxTrack: 1 });
+  const { dimensions } = await c.addImageTargets(url);
+  const { featurePoints } = await c.detect(cv);
+  const r = await c.match(featurePoints, 0);
+  return { src, dims: dimensions[0], features: featurePoints.length, matched: !!r.modelViewTransform, debug: r.debugExtra ? Object.keys(r.debugExtra) : null };
+}
+window.result = [];
+for (const s of ['../fixtures/kid_name_susan.png', '../fixtures/kid_name_scribble.png']) window.result.push(await test(s, 720, 960));
+window.done = true;
+</script>
