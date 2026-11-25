@@ -229,6 +229,10 @@ dialog img { width: 100%; height: auto; }
  box-shadow:0 1px 2px rgba(0,0,0,.12),0 22px 40px -14px rgba(60,35,20,.4);transform:rotate(var(--r,0deg))}
 .pz-fan{position:relative;width:min(80vw,560px);height:calc(100svh - 470px);max-height:400px;min-height:200px}
 .pz-fan .pz-paper{position:absolute;left:50%;top:50%;width:auto;height:94%}
+.pz-phone{position:absolute;z-index:3;right:-6%;top:50%;height:104%;aspect-ratio:540/974;margin:0;transform:translateY(-50%) rotate(5deg)}
+.pz-phone video{display:block;width:100%;height:100%;object-fit:cover;border-radius:22px;border:7px solid #1d1512;box-shadow:0 24px 44px -14px rgba(40,20,10,.55);background:#1d1512}
+.pz-phone figcaption{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%) rotate(-5deg);white-space:nowrap;background:var(--red);color:#fff;font:700 12px var(--body);padding:5px 11px;border-radius:20px}
+@media(max-width:720px){.pz-phone{right:-2%;height:108%}.pz-fan .pz-paper:first-child{display:none}}
 .pz-hero .hero-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 .pz-hint{font-weight:700;color:var(--red);font-size:15px}
 .pz-abc{height:380vh;position:relative}
@@ -392,6 +396,7 @@ dialog img { width: 100%; height: auto; }
     <img class="pz-paper" src="img/pencil/abcbw.jpg" alt="" width="827" height="1170" style="--r:-12deg;translate:-95% -50%">
     <img class="pz-paper" src="img/pencil/xmas.jpg" alt="" width="827" height="1170" style="--r:9deg;translate:-5% -52%">
     <img class="pz-paper" src="img/pencil/mk_color_A.jpg" alt="Three printable dot-to-dot pages on a table" width="827" height="1170" style="--r:-2deg;translate:-50% -48%">
+    <figure class="pz-phone"><video src="img/video/real-scan-bear.mp4" poster="img/video/real-scan-bear.jpg" autoplay muted loop playsinline preload="metadata" aria-label="A real phone scanning a colored polar bear page; the bear stands up and waves"></video><figcaption>Real phone · real page · no edits</figcaption></figure>
    </div>
    <div class="hero-actions"><a class="btn primary" href="#bundle">See the Christmas bundle</a><a class="btn" data-shop href="https://marymariiart.etsy.com">Visit our Etsy shop ↗</a></div>
    <a class="pz-free" href="#free">Or try a free page first →</a>
@@ -701,6 +706,13 @@ lb.addEventListener("keydown", e => { if (e.key === "ArrowLeft") openAt(cur - 1)
     return { x: pt.x - innerWidth / 2 - Math.cos(r) * W / 2, y: pt.y - innerHeight / 2 - Math.sin(r) * W / 2, a: DRAW_A };
   }
   const fixed = (x, y, a) => () => ({ x: x * innerWidth, y: y * innerHeight, a });
+  // opening view: the pencil leans on the left edge of the pages, tip at their top-left corner
+  const fan = document.querySelector(".pz-fan");
+  const heroPose = () => {
+    const r = fan.getBoundingClientRect(), a = -72, rad = a * Math.PI / 180, W = pw.offsetWidth;
+    const tx = r.left + r.width * (innerWidth < 720 ? 0.02 : 0.06), ty = r.top + scrollY + r.height * 0.1;
+    return { x: tx - innerWidth / 2 - Math.cos(rad) * W / 2, y: ty - innerHeight / 2 - Math.sin(rad) * W / 2, a };
+  };
   let ticking = false;
   function update() {
     ticking = false;
@@ -709,7 +721,7 @@ lb.addEventListener("keydown", e => { if (e.key === "ArrowLeft") openAt(cur - 1)
     const d = clamp((y - abcTop) / (span * DRAW_END));
     const c = clamp((y - abcTop - span * COL0) / (span * (1 - COL0) * 0.85));
     const K = [
-      [0, fixed(0.02, 0.06, -14)],
+      [0, heroPose],
       [top(xmas), fixed(0.05, 0.1, 18)],
       [abcTop, () => tipPose(line.getPointAtLength(0))],
       [drawEnd, () => tipPose(line.getPointAtLength(LEN))],
