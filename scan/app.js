@@ -873,10 +873,10 @@ async function startWith(stream) {
   videoTex.minFilter = THREE.LinearFilter; videoTex.magFilter = THREE.LinearFilter; videoTex.generateMipmaps = false;
   bgMat.uniforms.uVideo.value = videoTex;
 
-  if (!data) data = await (await fetch(SHEET.parts)).json();
+  if (!data) data = await (await fetch(SHEET.parts + "?v=4")).json();
   if (data.clean && !inkTex) {   // a drawn character: fixed outline and lines, the camera only brings the colors
     CLEAN = true;
-    inkTex = await new THREE.TextureLoader().loadAsync(`targets/${data.clean.ink}?v=3`);
+    inkTex = await new THREE.TextureLoader().loadAsync(`targets/${data.clean.ink}?v=4`);
     inkTex.minFilter = THREE.LinearFilter; inkTex.generateMipmaps = false;
   }
   if (controller) controller.stopProcessVideo();
