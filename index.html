@@ -265,6 +265,19 @@ dialog img { width: 100%; height: auto; }
  .nav-links a:not(.btn):hover{background:var(--paper)}
  .nav-links .btn{justify-content:center;margin-top:6px;background:var(--ink);color:var(--paper)}
 }
+
+/* free sample pages */
+.free-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 920px; margin: 30px auto 0; }
+.free-card { background: var(--card); border-radius: var(--r); box-shadow: 0 0 0 2px var(--grid); padding: 18px; display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: center; }
+.free-card img { width: 150px; height: auto; border-radius: 4px; box-shadow: 0 8px 20px -10px rgba(60,35,20,.45); transform: rotate(-2deg); }
+.free-card h3 { font-size: 1.6rem; }
+.free-card p { color: var(--muted); margin: 6px 0 14px; font-size: .95rem; }
+.free-dl { display: flex; flex-wrap: wrap; gap: 10px; }
+.free-dl .btn { padding: 10px 18px; font-size: .95rem; }
+.free-more { text-align: center; margin-top: 26px; color: var(--muted); }
+.free-more a, .pz-free { color: var(--red); font-weight: 700; }
+.pz-free { font-size: 16px; }
+@media (max-width: 760px) { .free-cards { grid-template-columns: 1fr; } .free-card { grid-template-columns: 110px 1fr; } .free-card img { width: 110px; } }
 /* phone: shorter sheet grids with a show-all button */
 .more { display: none; }
 @media (max-width: 720px) {
@@ -351,6 +364,7 @@ dialog img { width: 100%; height: auto; }
   <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><i></i></button>
   <nav class="nav-links" id="navLinks" aria-label="Main">
     <a href="#how">How it works</a>
+    <a href="#free">Free page</a>
     <a href="#bundle">Christmas bundle</a>
     <a href="#abc">ABC sets</a>
     <a href="#faq">Questions</a>
@@ -380,6 +394,7 @@ dialog img { width: 100%; height: auto; }
     <img class="pz-paper" src="img/pencil/mk_color_A.jpg" alt="Three printable dot-to-dot pages on a table" width="827" height="1170" style="--r:-2deg;translate:-50% -48%">
    </div>
    <div class="hero-actions"><a class="btn primary" href="#bundle">See the Christmas bundle</a><a class="btn" data-shop href="https://marymariiart.etsy.com">Visit our Etsy shop ↗</a></div>
+   <a class="pz-free" href="#free">Or try a free page first →</a>
    <div class="pz-hint">Scroll and the pencil rolls along ↓</div>
   </section>
 
@@ -410,6 +425,26 @@ dialog img { width: 100%; height: auto; }
       <article class="step rv" style="--d:1"><span class="num">2</span><h3>Color it in</h3><p>Crayons, markers or pencils all work. The little colored picture on the page shows one way to do it.</p></article>
       <article class="step rv" style="--d:2"><span class="num">3</span><h3>Scan and watch</h3><p>Point the phone camera at the QR code, open the link, then aim it at the page. The picture starts to move.</p></article>
     </div>
+  </section>
+
+  <section class="wrap section free" id="free" aria-labelledby="free-title">
+    <div class="section-head">
+      <h2 id="free-title">Try a free page</h2>
+      <p class="lede">Print one page tonight, let your child connect the dots and color it in, then scan the QR code and watch it come alive. No sign-up and no email, just download and print.</p>
+    </div>
+    <div class="free-cards">
+      <article class="free-card rv">
+        <img src="img/free/hedgehog.jpg" alt="Free hedgehog dot-to-dot page, dots 1 to 30" width="662" height="936" loading="lazy">
+        <div><h3>Hedgehog</h3><p>From the Christmas bundle · 30 dots · ages 4–8</p>
+        <div class="free-dl"><a class="btn primary" href="free/MaryMarii-free-page-hedgehog-A4.pdf" download>A4 PDF</a><a class="btn" href="free/MaryMarii-free-page-hedgehog-Letter.pdf" download>US Letter PDF</a></div></div>
+      </article>
+      <article class="free-card rv">
+        <img src="img/free/A-alligator.jpg" alt="Free A is for Alligator letter tracing and dot-to-dot page" width="662" height="936" loading="lazy">
+        <div><h3>A is for Alligator</h3><p>From the ABC sets · trace the letter, 36 dots · ages 3–6</p>
+        <div class="free-dl"><a class="btn primary" href="free/MaryMarii-free-page-A-alligator-A4.pdf" download>A4 PDF</a><a class="btn" href="free/MaryMarii-free-page-A-alligator-Letter.pdf" download>US Letter PDF</a></div></div>
+      </article>
+    </div>
+    <p class="free-more rv">Like it? The <a href="#bundle">Christmas bundle</a> has 15 pages and the <a href="#abc">ABC sets</a> have all 26 letters.</p>
   </section>
 
   <section class="wrap" id="bundle" aria-labelledby="bundle-title">
