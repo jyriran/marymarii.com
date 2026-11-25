@@ -233,6 +233,16 @@ dialog img { width: 100%; height: auto; }
 .pz-phone video{display:block;width:100%;height:100%;object-fit:cover;border-radius:22px;border:7px solid #1d1512;box-shadow:0 24px 44px -14px rgba(40,20,10,.55);background:#1d1512}
 .pz-phone figcaption{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%) rotate(-5deg);white-space:nowrap;background:var(--red);color:#fff;font:700 12px var(--body);padding:5px 11px;border-radius:20px}
 @media(max-width:720px){.pz-phone{right:-2%;height:108%}.pz-fan .pz-paper:first-child{display:none}}
+.pz-short{display:none}
+@media(max-width:720px){
+ .pz-hero{gap:10px;padding-bottom:18px}
+ .pz-hero .pz-long{display:none}.pz-hero .pz-short{display:block;margin-top:6px}
+ .pz-hero .eyebrow{font-size:11px;margin-bottom:6px}
+ .pz-fan{height:calc(100svh - 390px);min-height:260px;max-height:460px;margin:6px 0 22px}
+ .pz-hero .hero-actions .btn:not(.primary){display:none}
+ .pz-phone figcaption{font-size:11px;bottom:-12px}
+ .pz-free{font-size:15px}
+}
 .pz-hero .hero-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 .pz-hint{font-weight:700;color:var(--red);font-size:15px}
 .pz-abc{height:380vh;position:relative}
@@ -390,7 +400,7 @@ dialog img { width: 100%; height: auto; }
    <div class="pz-head">
     <p class="eyebrow">Printable activity sheets · ages 4–8</p>
     <h1 id="hero-title">Print. Dot. Color.</h1>
-    <p>Dot-to-dot pages for kids, printed at home. When the picture is finished, a grown-up scans the QR code and the drawing comes alive on the phone. <b>No app to install.</b></p>
+    <p class="pz-long">Dot-to-dot pages for kids, printed at home. When the picture is finished, a grown-up scans the QR code and the drawing comes alive on the phone. <b>No app to install.</b></p><p class="pz-short">Printable dot-to-dot pages that come alive on your phone. <b>No app needed.</b></p>
    </div>
    <div class="pz-fan">
     <img class="pz-paper" src="img/pencil/abcbw.jpg" alt="" width="827" height="1170" style="--r:-12deg;translate:-95% -50%">
