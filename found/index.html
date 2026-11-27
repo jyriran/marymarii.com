@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>You found it! · MaryMarii</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#c8382e">
+<link rel="icon" href="../brand/icon-32.png" type="image/png" sizes="32x32">
+<style>
+@font-face{font-family:Gluten;font-weight:800;font-display:swap;src:url(../fonts/gluten-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:Figtree;font-weight:700;font-display:swap;src:url(../fonts/figtree-latin-700-normal.woff2) format("woff2")}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#fffcf6 radial-gradient(#eadfd2 3px,transparent 3.6px) 0 0/34px 34px;color:#2a1c15;font:700 16px Figtree,system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.app{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+.logo{position:absolute;top:max(16px,env(safe-area-inset-top));height:30px}
+h1{font:800 clamp(44px,13vw,80px)/1 Gluten,cursive;color:#c8382e;margin:0;animation:pop .6s cubic-bezier(.2,1.6,.4,1) both,wiggle 1.2s ease-in-out .6s infinite}
+h2{font:800 clamp(22px,6.5vw,34px)/1.15 Gluten,cursive;margin:10px 0 0}
+.crew{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;max-width:520px;margin:22px 0}
+.crew img{height:min(16vw,82px);width:min(16vw,82px);object-fit:contain}
+.tip{font-size:15px;opacity:.65}
+.btn{margin-top:14px;border:0;border-radius:999px;font:800 22px Gluten,cursive;padding:14px 30px 10px;color:#fff;background:#2f7d4f;box-shadow:0 5px 0 #1f5a37;cursor:pointer}
+.hop{animation:hop .7s ease-in-out infinite}.swing{animation:swing 1.2s ease-in-out infinite;transform-origin:50% 0}.wiggle{animation:wiggle .9s ease-in-out infinite}.dance{animation:dance 1s ease-in-out infinite}
+@keyframes pop{from{transform:scale(.2);opacity:0}to{transform:none;opacity:1}}
+@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-18px)}}
+@keyframes swing{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes dance{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px) rotate(-6deg) translateY(-6px)}75%{transform:translateX(10px) rotate(6deg) translateY(-6px)}}
+.conf{position:fixed;top:-20px;width:10px;height:16px;border-radius:2px;animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <img class="logo" src="../brand/lockup-ink.png" alt="MaryMarii">
+  <h1>You found it!</h1>
+  <h2>Merry Christmas Eve! 🎄</h2>
+  <div class="crew" id="crew"></div>
+  <button class="btn" id="more">More confetti!</button>
+  <p class="tip">Nothing is saved or sent · marymarii.com</p>
+</div>
+<script>
+const P=[["bear","dance"],["bell","swing"],["bunny","hop"],["fox","wiggle"],["gift","hop"],["gingerbread","dance"],["hedgehog","hop"],["house","wiggle"],["owl","wiggle"],["penguin","dance"],["reindeer","hop"],["santa","dance"],["snowman","wiggle"],["stocking","swing"],["tree","wiggle"]];
+document.getElementById("crew").innerHTML=P.map((p,i)=>`<img class="${p[1]}" style="animation-delay:${(i%5)*.12}s" src="../bingo/img/${p[0]}.webp" alt="">`).join("");
+function confetti(){const c=["#c8382e","#2f7d4f","#f2b632","#4a90d9","#e88aa8"];for(let i=0;i<80;i++){const e=document.createElement("i");e.className="conf";e.style.left=Math.random()*100+"vw";e.style.background=c[i%5];e.style.animationDuration=(2+Math.random()*2.5)+"s";e.style.animationDelay=Math.random()*.8+"s";document.body.appendChild(e);setTimeout(()=>e.remove(),5200)}
+ try{const a=new (window.AudioContext||window.webkitAudioContext)();[523,659,784,1047].forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+i*.13;o.type="triangle";o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.4);o.connect(g).connect(a.destination);o.start(t);o.stop(t+.45)})}catch(e){}}
+document.getElementById("more").onclick=confetti;confetti();
+</script>
+</body>
+</html>
