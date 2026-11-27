@@ -242,7 +242,7 @@ def page(slug, p):
 <link rel="canonical" href="{SITE}/shop/{slug}/">
 <meta property="og:title" content="{e(p['title'])}">
 <meta property="og:description" content="{e(p['desc'])}">
-<meta property="og:image" content="{SITE}/og.jpg">
+<meta property="og:image" content="{SITE}/img/shop/card-{slug}.jpg">
 <link rel="icon" href="../../brand/icon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="../../brand/icon-180.png">
 <style>{CSS}</style>
@@ -324,8 +324,8 @@ def overview():
     cards = ""
     for s in order:
         p = PRODUCTS[s]
-        img = {"abc-a-m": "../img/shop/abc-a.jpg", "abc-n-z": "../img/shop/abc-z.jpg"}.get(s, p["poster"].replace("../../", "../"))
-        cards += f'''<article class="pc"><a href="{s}/" class="pimg"><img src="{img}" alt="" loading="lazy" width="540" height="974"></a>
+        img = f"../img/shop/card-{s}.jpg"
+        cards += f'''<article class="pc"><a href="{s}/" class="pimg"><img src="{img}" alt="" loading="lazy" width="480" height="480"></a>
 <div class="pbody"><span class="pk">{e(p["kicker"])}</span><h3><a href="{s}/">{e(p["name"])}</a></h3>
 <div class="prow"><span class="price">€{p["price"]}</span><a class="btn sm" href="{s}/">See the pages</a></div></div></article>'''
     css = CSS.replace("../../", "../")
@@ -337,7 +337,7 @@ def overview():
 <style>{css}
 .pgrid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:22px;margin:30px 0 60px}}
 .pc{{background:#fff;border-radius:20px;box-shadow:0 0 0 2px var(--grid);overflow:hidden;display:flex;flex-direction:column}}
-.pimg img{{width:100%;height:260px;object-fit:cover;display:block}}
+.pimg img{{width:100%;height:auto;aspect-ratio:1/1;display:block}}
 .pbody{{padding:14px 16px 18px;display:flex;flex-direction:column;gap:8px;flex:1}}
 .pk{{font-size:.8rem;font-weight:700;color:var(--muted)}}
 .pc h3{{font-size:22px}} .pc h3 a{{text-decoration:none}}
@@ -345,7 +345,6 @@ def overview():
 .prow .btn{{text-align:center}}
 .btn.sm{{padding:10px 16px 7px;font-size:17px;white-space:nowrap;box-shadow:0 4px 0 var(--ink)}}
 .pc .price{{font-size:30px}}
-.pimg img{{object-position:top}}
 </style></head><body>
 <header><div class="wrap nav"><a href="../"><img src="../brand/lockup-ink.png" alt="MaryMarii" width="186" height="56"></a>
 <nav><a href="../#how">How it works</a><a href="../#free">Free page</a></nav></div></header>
