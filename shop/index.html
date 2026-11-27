@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shop · MaryMarii printable pages that come alive</title>
+<meta name="description" content="Printable dot-to-dot, tracing and Christmas activity pages for kids 3–8 that come alive when you scan them with your phone. Instant download, no app.">
+<link rel="canonical" href="https://marymarii.com/shop/"><link rel="icon" href="../brand/icon-32.png" type="image/png" sizes="32x32">
+<style>
+@font-face{font-family:Gluten;font-weight:600;font-display:swap;src:url(../fonts/gluten-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:Gluten;font-weight:800;font-display:swap;src:url(../fonts/gluten-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:Figtree;font-weight:400;font-display:swap;src:url(../fonts/figtree-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:Figtree;font-weight:700;font-display:swap;src:url(../fonts/figtree-latin-700-normal.woff2) format("woff2")}
+:root{--paper:#fbf7f1;--ink:#2a1c15;--muted:#6d5d53;--red:#d65f50;--blush:#f4e5dd;--teal:#8cbdb5;--sun:#ecc06a;--grid:#e9dfd3}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper) radial-gradient(var(--grid) 2.2px,transparent 2.6px) 0 0/28px 28px;color:var(--ink);font:400 17px/1.6 Figtree,system-ui,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+a{color:inherit}
+header{position:sticky;top:0;z-index:5;background:rgba(251,247,241,.92);backdrop-filter:blur(6px);border-bottom:2px solid var(--grid)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+.nav img{height:42px;width:auto;display:block}
+.nav nav a{font-weight:700;text-decoration:none;margin-left:22px;font-size:.95rem}
+h1,h2,h3{font-family:Gluten,cursive;font-weight:800;line-height:1.1;margin:0}
+h1{font-size:clamp(34px,5.4vw,56px)}
+h2{font-size:clamp(28px,4vw,40px);text-align:center}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:46px;align-items:center;padding:46px 0 30px}
+.kicker{display:inline-block;background:var(--sun);font:800 17px Gluten;padding:8px 16px 4px;border-radius:30px;box-shadow:0 0 0 3px var(--ink);transform:rotate(-2deg);margin-bottom:18px}
+.lead{font-size:1.12rem;color:var(--muted);margin:18px 0 24px}
+.buy{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.price{font:800 40px Gluten}
+.btn{display:inline-block;background:var(--red);color:#fff!important;font:800 22px Gluten;text-decoration:none;padding:16px 30px 11px;border-radius:40px;box-shadow:0 6px 0 var(--ink);border:3px solid var(--ink);transition:transform .12s}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+.alt{font-size:.92rem;color:var(--muted);margin-top:14px}
+.ticks{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:6px;font-weight:700}
+.ticks li:before{content:"✓ ";color:#2f7d4f}
+.phone{justify-self:center;width:min(330px,80vw);aspect-ratio:9/18.5;border:14px solid var(--ink);border-radius:46px;background:var(--ink);overflow:hidden;box-shadow:18px 18px 0 var(--teal);transform:rotate(3deg)}
+.phone video{width:100%;height:100%;object-fit:cover;display:block;border-radius:32px}
+.note{font-size:.85rem;color:var(--muted);text-align:center;margin-top:22px}
+section{padding:56px 0}
+.card{background:#fff;border:3px solid var(--ink);border-radius:26px;box-shadow:0 8px 0 var(--ink);padding:34px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:30px}
+.step{text-align:center}
+.step b{display:inline-flex;width:54px;height:54px;border-radius:50%;background:var(--sun);border:3px solid var(--ink);align-items:center;justify-content:center;font:800 26px Gluten;margin-bottom:10px}
+.step h3{font-size:24px;margin-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px;margin-top:30px}
+.grid figure{margin:0;background:#fff;border-radius:14px;padding:8px;box-shadow:0 0 0 2px var(--grid);text-align:center}
+.grid img{width:100%;height:auto;display:block;border-radius:8px}
+.grid figcaption{font-size:.85rem;color:var(--muted);margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.included li{margin:6px 0}
+.free{background:var(--blush);text-align:center}
+details{background:#fff;border:2px solid var(--grid);border-radius:16px;padding:14px 18px;margin:10px 0}
+summary{font-weight:700;cursor:pointer}
+.ai{font-size:.85rem;color:var(--muted);font-style:italic}
+.final{text-align:center}
+footer{background:var(--ink);color:#fbf7f1;padding:34px 0;font-size:.88rem;margin-top:40px}
+footer .wrap{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}
+@media (max-width:820px){.hero,.two{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.nav nav a:not(.shop){display:none}.phone{order:-1;width:min(260px,70vw)}}
+
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:22px;margin:30px 0 60px}
+.pc{background:#fff;border-radius:20px;box-shadow:0 0 0 2px var(--grid);overflow:hidden;display:flex;flex-direction:column}
+.pimg img{width:100%;height:260px;object-fit:cover;display:block}
+.pbody{padding:14px 16px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
+.pk{font-size:.8rem;font-weight:700;color:var(--muted)}
+.pc h3{font-size:22px} .pc h3 a{text-decoration:none}
+.prow{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-top:auto}
+.prow .btn{text-align:center}
+.btn.sm{padding:10px 16px 7px;font-size:17px;white-space:nowrap;box-shadow:0 4px 0 var(--ink)}
+.pc .price{font-size:30px}
+.pimg img{object-position:top}
+</style></head><body>
+<header><div class="wrap nav"><a href="../"><img src="../brand/lockup-ink.png" alt="MaryMarii" width="186" height="56"></a>
+<nav><a href="../#how">How it works</a><a href="../#free">Free page</a></nav></div></header>
+<main class="wrap"><div style="text-align:center;padding:40px 0 0"><h1>Pages that come alive</h1>
+<p class="lead" style="margin:12px auto 0;max-width:620px">Print, color, scan with your phone and watch the drawing move. Instant download, no app, no sign-up.</p></div>
+<div class="pgrid"><article class="pc"><a href="christmas-eve-box/" class="pimg"><img src="../img/video/found-it.jpg" alt="" loading="lazy" width="540" height="974"></a>
+<div class="pbody"><span class="pk">42 pages · ages 3–8</span><h3><a href="christmas-eve-box/">Christmas Eve Box Activity Pack</a></h3>
+<div class="prow"><span class="price">€5.99</span><a class="btn sm" href="christmas-eve-box/">See the pages</a></div></div></article><article class="pc"><a href="christmas/" class="pimg"><img src="../img/video/real-scan-bear.jpg" alt="" loading="lazy" width="540" height="974"></a>
+<div class="pbody"><span class="pk">15 dot-to-dot pages · ages 4–8</span><h3><a href="christmas/">Christmas Coloring Pages That Come Alive</a></h3>
+<div class="prow"><span class="price">€4.99</span><a class="btn sm" href="christmas/">See the pages</a></div></div></article><article class="pc"><a href="christmas-bingo/" class="pimg"><img src="../img/video/bingo-caller.jpg" alt="" loading="lazy" width="540" height="974"></a>
+<div class="pbody"><span class="pk">12 picture cards · ages 3–8</span><h3><a href="christmas-bingo/">Christmas Bingo with a Magic Caller</a></h3>
+<div class="prow"><span class="price">€2.99</span><a class="btn sm" href="christmas-bingo/">See the pages</a></div></div></article><article class="pc"><a href="learning-bundle/" class="pimg"><img src="../img/video/real-scan-narwhal.jpg" alt="" loading="lazy" width="540" height="974"></a>
+<div class="pbody"><span class="pk">46 pages · ages 3–6 · save 33%</span><h3><a href="learning-bundle/">Preschool Learning Bundle: ABC A–Z + Numbers 1–20</a></h3>
+<div class="prow"><span class="price">€9.99</span><a class="btn sm" href="learning-bundle/">See the pages</a></div></div></article><article class="pc"><a href="abc-a-m/" class="pimg"><img src="../img/shop/abc-a.jpg" alt="" loading="lazy" width="540" height="974"></a>
+<div class="pbody"><span class="pk">13 letter pages · ages 3–6</span><h3><a href="abc-a-m/">Alphabet Tracing A–M That Comes Alive</a></h3>
+<div class="prow"><span class="price">€4.99</span><a class="btn sm" href="abc-a-m/">See the pages</a></div></div></article><article class="pc"><a href="abc-n-z/" class="pimg"><img src="../img/shop/abc-z.jpg" alt="" loading="lazy" width="540" height="974"></a>
+<div class="pbody"><span class="pk">13 letter pages · ages 3–6</span><h3><a href="abc-n-z/">Alphabet Tracing N–Z That Comes Alive</a></h3>
+<div class="prow"><span class="price">€4.99</span><a class="btn sm" href="abc-n-z/">See the pages</a></div></div></article><article class="pc"><a href="123/" class="pimg"><img src="../img/video/real-scan-duck.jpg" alt="" loading="lazy" width="540" height="974"></a>
+<div class="pbody"><span class="pk">20 number pages · ages 3–6</span><h3><a href="123/">Number Tracing 1–20 That Comes Alive</a></h3>
+<div class="prow"><span class="price">€4.99</span><a class="btn sm" href="123/">See the pages</a></div></div></article></div></main>
+<footer><div class="wrap"><span>© 2026 MaryMariiArt · Blissena OÜ, Estonia</span><span>Checkout and file delivery are provided by Payhip (payments by Stripe).</span></div></footer>
+<script data-goatcounter="https://marymarii.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body></html>
