@@ -115,7 +115,7 @@ PRODUCTS = {
     payhip="kLe15", etsy=None, price="5.99",
     name="Christmas Eve Box Activity Pack",
     kicker="42 pages · ages 3–8",
-    lead="Fill the whole evening: a treasure hunt that leads to the Christmas Eve box, a reindeer hunt, picture bingo with a magic caller and dot-to-dot pages that come alive. Print at home, no app needed.",
+    lead="A Christmas Eve the kids will remember, all evening long: a treasure hunt that leads to their Christmas Eve box, a reindeer hunt, picture bingo with a magic caller and dot-to-dot pages that come alive. Print at home, no app needed.",
     video=V+"found-it.mp4", poster=V+"found-it.jpg",
     video_note="The last treasure clue has a QR code. Scan it and the phone celebrates: \"You found it!\"",
     grid_title="What's inside", grid=[(S+f"eb-p{n}.jpg", c) for n, c in [
@@ -219,6 +219,20 @@ footer .wrap{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}
 @media (max-width:820px){.hero,.two{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.nav nav a:not(.shop){display:none}.phone{order:-1;width:min(260px,70vw)}}
 """
 
+import json, re
+def ages(p):
+    m = re.search(r"ages (\d)–(\d)", p["kicker"]); return int(m.group(1)), int(m.group(2))
+
+def jsonld(slug, p):
+    lo, hi = ages(p)
+    prod = {"@context": "https://schema.org", "@type": "Product", "name": p["name"], "description": p["desc"],
+            "image": f"{SITE}/img/shop/card-{slug}.jpg", "url": f"{SITE}/shop/{slug}/", "sku": "MM-" + p["payhip"],
+            "brand": {"@type": "Brand", "name": "MaryMarii"}, "category": "Printable kids activity pages (digital download)",
+            "audience": {"@type": "PeopleAudience", "suggestedMinAge": lo, "suggestedMaxAge": hi},
+            "offers": {"@type": "Offer", "price": p["price"], "priceCurrency": "EUR", "availability": "https://schema.org/InStock",
+                       "url": f"{SITE}/shop/{slug}/", "seller": {"@type": "Organization", "name": "MaryMariiArt (Blissena OÜ)"}}}
+    return '<script type="application/ld+json">' + json.dumps(prod, ensure_ascii=False) + '</script>'
+
 def page(slug, p):
     e = html.escape
     grid = "".join(f'<figure><img src="{src}" alt="{e(n)} page" loading="lazy" width="300" height="424"><figcaption>{e(n)}</figcaption></figure>' for src, n in p["grid"])
@@ -246,6 +260,7 @@ def page(slug, p):
 <link rel="icon" href="../../brand/icon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="../../brand/icon-180.png">
 <style>{CSS}</style>
+{jsonld(slug, p)}
 </head>
 <body>
 <header><div class="wrap nav">
@@ -261,6 +276,7 @@ def page(slug, p):
       <div class="buy"><span class="price">€{p['price']}</span>{buy_btn}</div>
       {etsy}
       <ul class="ticks"><li>No app, no sign-up</li><li>Print at home, as often as you like</li><li>Works on any phone camera</li></ul>
+      <p class="alt">🎁 Giving it as a gift? <a href="../../free/MaryMarii-gift-cards-A4.pdf">Print a free gift card</a> (<a href="../../free/MaryMarii-gift-cards-Letter.pdf">US Letter</a>) to put under the tree.</p>
     </div>
     <div>
       <div class="phone"><video src="{p['video']}" poster="{p['poster']}" autoplay muted loop playsinline></video></div>
@@ -297,6 +313,7 @@ def page(slug, p):
     <details><summary>Do I need an app?</summary><p>No. Scan the QR code with the normal phone camera and the magic camera opens in the browser.</p></details>
     <details><summary>Which printer and paper?</summary><p>Any home printer, black and white is fine. Plain A4 or US Letter paper works; thicker paper is nicer for crayons and markers.</p></details>
     {faq_html}
+    <details><summary>Can I give it as a gift?</summary><p>Yes! Buy it with your own email, then print our free gift card, write the gift on it and put it under the tree or in a stocking. Print the pages for the child or send them the PDF.</p></details>
     <details><summary>Can I use it in my classroom?</summary><p>Yes, you can print for your own class. For a whole school, send us a message at info@marymarii.com.</p></details>
   </section>
 
@@ -363,3 +380,15 @@ if __name__ == "__main__":
         open(f"shop/{s}/index.html", "w").write(page(s, PRODUCTS[s]))
         print("built shop/%s/index.html" % s)
     open("shop/index.html", "w").write(overview()); print("built shop/index.html")
+    urls = [SITE + "/", SITE + "/shop/"] + [f"{SITE}/shop/{k}/" for k in PRODUCTS]
+    open("sitemap.xml", "w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{u}</loc></url>" for u in urls) + "</urlset>\n")
+    L = ["# MaryMarii", "", "> Printable activity pages for kids ages 3–8 (dot-to-dot, letter and number tracing, Christmas games) that come alive in augmented reality: a grown-up scans the QR code on the colored page with a normal phone camera and the child's own drawing moves on screen. No app, no account; nothing is uploaded. Instant PDF download (A4 + US Letter), print at home. Sold by MaryMariiArt (Blissena OÜ, Estonia).", "",
+         "Good gift for: parents, grandparents, teachers and homeschoolers looking for an inexpensive, screen-light hands-on activity, a Christmas Eve box filler or a stocking stuffer.", "", "## Products", ""]
+    for k, p in PRODUCTS.items():
+        lo, hi = ages(p)
+        L.append(f"- [{p['name']}]({SITE}/shop/{k}/): €{p['price']}, ages {lo}–{hi}. {p['desc']}")
+    L += ["", "## Free", "", f"- [Free sample pages]({SITE}/#free): try the magic before buying", f"- [Printable gift cards]({SITE}/free/MaryMarii-gift-cards-A4.pdf): to give a digital pack as a present", "",
+          "## How it works", "", "1. Print a page and let the child connect the dots / trace and color it.", "2. A grown-up scans the QR code on the page with the phone camera; the magic camera opens in the browser (iPhone and Android).", "3. Point the phone at the page: the drawing comes alive in the child's own colors.", "",
+          "Also on Etsy: https://marymariiart.etsy.com · Contact: info@marymarii.com"]
+    open("llms.txt", "w").write("\n".join(L) + "\n")
+    print("built sitemap.xml, llms.txt")
