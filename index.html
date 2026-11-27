@@ -773,5 +773,12 @@ lb.addEventListener("keydown", e => { if (e.key === "ArrowLeft") openAt(cur - 1)
   addEventListener("scroll", mark, { passive: true }); mark();
 })();
 </script>
+<!-- Privacy-friendly stats (GoatCounter, no cookies). Main site only, never on the kids' pages (scan, bingo, found). -->
+<script>
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a||!window.goatcounter||!window.goatcounter.count)return;var h=a.getAttribute('href');
+if(/\.pdf($|\?)/i.test(h)){window.goatcounter.count({path:'download/'+h.split('/').pop(),title:'Free PDF download',event:true});}
+else if(/etsy\.com/i.test(h)){var m=h.match(/listing\/(\d+)/);window.goatcounter.count({path:'etsy/'+(m?m[1]:'shop'),title:(a.textContent||'').trim().slice(0,60)||'Etsy link',event:true});}});
+</script>
+<script data-goatcounter="https://marymarii.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
