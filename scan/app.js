@@ -12,10 +12,14 @@ Object.assign(NAMES, {'abc-a': 'Alligator', 'abc-b': 'Bear', 'abc-c': 'Cat', 'ab
 const params = new URLSearchParams(location.search);
 /* 123 Count & Connect: ?s=n1 … n20 */
 Object.assign(NAMES, {'n1': 'Dinosaur', 'n2': 'Duck', 'n3': 'Crab', 'n4': 'Ladybug', 'n5': 'Bee', 'n6': 'Snail', 'n7': 'Frog', 'n8': 'Panda', 'n9': 'Monkey', 'n10': 'Cow', 'n11': 'Sheep', 'n12': 'Chick', 'n13': 'Butterfly', 'n14': 'Dolphin', 'n15': 'Seal', 'n16': 'Flamingo', 'n17': 'Squirrel', 'n18': 'Parrot', 'n19': 'Tiger', 'n20': 'Dragon'});
+/* My Feelings Friends: ?s=feel-happy … feel-calm */
+Object.assign(NAMES, {'feel-happy': 'Happy Dog', 'feel-sad': 'Sad Hippo', 'feel-angry': 'Angry Bear', 'feel-scared': 'Scared Mouse', 'feel-worried': 'Worried Koala', 'feel-excited': 'Excited Bunny', 'feel-proud': 'Proud Lion', 'feel-calm': 'Calm Cat'});
 const sheetKey = NAMES[params.get('s')] ? params.get('s') : 'penguin';
 const paperSize = params.get('size') === 'letter' ? 'letter' : 'a4';
 const IS_ABC = sheetKey.startsWith('abc-');
 const IS_123 = /^n\d+$/.test(sheetKey);
+const IS_FEEL = sheetKey.startsWith('feel-');
+const FEELING = IS_FEEL ? sheetKey.slice(5) : null;
 /* Name greeting from the letter boxes: off for now (handwriting on phone cameras isn't reliable enough). ?name=1 turns it on for testing. */
 const NAME_READING = new URLSearchParams(location.search).get('name') === '1';
 const SHEET = { name: NAMES[sheetKey], mind: `./targets/${sheetKey}-${paperSize}.js`, parts: `targets/${sheetKey}_${paperSize}.json` };
@@ -643,6 +647,7 @@ function setState(s) {
   mg.hidden = s !== 'capturing';
   mg.classList.remove('run'); if (s === 'capturing') { void mg.offsetWidth; mg.classList.add('run'); }
   $('rec').disabled = !(s === 'alive');
+  if (IS_FEEL) $('feel').hidden = s !== 'alive';
   if (s === 'alive') { popT = 0; resetToon(); countDone = false; counters.forEach(sp => root.remove(sp)); counters = []; }
 }
 
@@ -669,7 +674,7 @@ const HOLD_MS = 2200;  // keep the character on the page this long when the came
 function resetToon() {
   Object.assign(TOON, {
     h: 0, vh: 0, air: false, s: -0.45, vs: 0, k: 0, vk: 0, r: 0, vr: 0, spin: 0, spinV: 0,
-    stand: 0, vstand: 0, act: null, actT: 0, rest: 0.9, joy: false, land: 0, sT: 0, kT: 0, rT: 0, lastAct: '',
+    b: 0, stand: 0, vstand: 0, act: null, actT: 0, rest: 0.9, joy: false, land: 0, sT: 0, kT: 0, rT: 0, lastAct: '',
   });
 }
 resetToon();
@@ -695,7 +700,66 @@ const ACTS = {
   swing:  { dur: 2.2, f(t, a) { if (!a.done) { a.done = 1; TOON.vr += (Math.random() < 0.5 ? -1 : 1) * 2.6; } } },
   boing:  { dur: 1.2, f(t, a) { if (t < 0.12) TOON.sT = -0.15; else if (!a.done) { a.done = 1; TOON.sT = 0; TOON.vs += 5.5; } } },
   jingle: { dur: 1.1, f(t) { TOON.rT = 0.12 * Math.sin(t * 2 * Math.PI * 5) * Math.sin(t * Math.PI / 1.1); } },
+  // feelings: each animal acts out its feeling
+  droop:  { dur: 2.6, f(t) { const w = Math.min(1, t / 0.6) * Math.min(1, (2.6 - t) / 0.5); TOON.sT = -0.11 * w; TOON.kT = -0.05 * w; TOON.rT = 0.045 * Math.sin(t * 2.4) * w; } },
+  stomp:  { dur: 1.7, f(t, a) { const w = Math.max(0, Math.sin(t * Math.PI / 1.7)); TOON.kT = 0.09 * Math.sin(t * 2 * Math.PI * 7) * w;
+                                 if (t < 0.14 || (t > 0.72 && t < 0.86)) TOON.sT = -0.3; else { TOON.sT = 0; if (t < 0.72 && !a.d1) { a.d1 = 1; launch(0.022); } if (t >= 0.86 && !a.d2) { a.d2 = 1; launch(0.022); } } } },
+  shiver: { dur: 2.0, f(t) { const w = Math.min(1, t / 0.25) * Math.min(1, (2 - t) / 0.3); TOON.sT = -0.16 * w; TOON.kT = 0.055 * Math.sin(t * 2 * Math.PI * 9) * w; } },
+  wobble: { dur: 2.4, f(t) { const w = Math.sin(t * Math.PI / 2.4); TOON.rT = 0.09 * Math.sin(t * 2 * Math.PI * 0.9) * w; TOON.kT = 0.05 * Math.sin(t * 2 * Math.PI * 1.8) * w; } },
+  stretch:{ dur: 2.0, f(t) { TOON.sT = t < 0.25 ? -0.1 : (t < 1.6 ? 0.22 : 0); TOON.kT = 0; TOON.rT = 0; } },
+  sway:   { dur: 3.2, f(t) { const w = Math.sin(t * Math.PI / 3.2); TOON.rT = 0.055 * Math.sin(t * 2 * Math.PI * 0.62) * w; TOON.sT = 0.04 * Math.sin(t * 2 * Math.PI * 0.31) * w; } },
 };
+
+/* ---------- Feelings pages: act out the feeling, then breathe together (3 slow breaths) ---------- */
+const FEEL_ACT = { happy: 'joy', sad: 'droop', angry: 'stomp', scared: 'shiver', worried: 'wobble', excited: 'bigspin', proud: 'stretch', calm: 'sway' };
+const FEEL_LINE = { happy: 'Happy feels bright and bouncy!', sad: 'It\'s OK to feel sad.', angry: 'It\'s OK to feel angry.', scared: 'Scared feels shaky. You are safe.',
+  worried: 'Worries feel wobbly.', excited: 'Excited feels fizzy and fast!', proud: 'Proud feels tall and strong!', calm: 'Calm feels soft and slow.' };
+const BREATHS = 3, HALF = 4;   // seconds in, seconds out
+const F = { phase: 'show', t: 0, reps: 0, cycle: 0, half: 0 };
+function resetFeel() { Object.assign(F, { phase: 'show', t: 0, reps: 0, cycle: 0, half: 0 }); feelText(`I feel ${FEELING}`, FEEL_LINE[FEELING], false); }
+let feelShown = ['', '', false];
+function feelText(big, small, again) {
+  if (feelShown[0] === big && feelShown[1] === small && feelShown[2] === again) return; feelShown = [big, small, again];
+  $('feel-big').textContent = big; $('feel-small').textContent = small; $('feel-again').hidden = !again;
+}
+let actx = null;
+function unlockAudio() {
+  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { actx = null; }
+}
+function bell(freq, at, vol) {           // soft bell: sine + quiet inharmonic partial, long gentle decay
+  const o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain(), g2 = actx.createGain();
+  o.type = 'sine'; o.frequency.value = freq; o2.type = 'sine'; o2.frequency.value = freq * 2.76;
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, at + 2.4);
+  g2.gain.setValueAtTime(0.0001, at); g2.gain.exponentialRampToValueAtTime(vol * 0.18, at + 0.01); g2.gain.exponentialRampToValueAtTime(0.0001, at + 0.7);
+  o.connect(g).connect(actx.destination); o2.connect(g2).connect(actx.destination);
+  o.start(at); o2.start(at); o.stop(at + 2.5); o2.stop(at + 0.8);
+}
+function chime(kind) {
+  if (!actx) return; const t = actx.currentTime + 0.02;
+  if (kind === 'in') bell(659.25, t, 0.12); else if (kind === 'out') bell(523.25, t, 0.1);
+  else { bell(523.25, t, 0.09); bell(659.25, t + 0.18, 0.09); bell(783.99, t + 0.36, 0.1); }
+}
+const ease = x => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, x)));
+function feelFlow(dt) {
+  F.t += dt;
+  if (F.phase === 'show') {
+    if (!TOON.act && !TOON.air && F.reps < 2 && F.t > 0.5) { TOON.act = { name: FEEL_ACT[FEELING], t: 0 }; F.reps++; }
+    if (F.reps >= 2 && !TOON.act && !TOON.air) { F.phase = 'intro'; F.t = 0; feelText('Let\'s breathe together', 'Watch me grow and shrink', false); }
+  } else if (F.phase === 'intro') {
+    if (F.t > 2.6) { F.phase = 'breathe'; F.t = 0; F.cycle = 0; F.half = 0; chime('in'); }
+  } else if (F.phase === 'breathe') {
+    const u = F.t - F.cycle * 2 * HALF, inhale = u < HALF;
+    TOON.b = inhale ? ease(u / HALF) : 1 - ease((u - HALF) / HALF);
+    feelText(inhale ? 'Breathe in…' : 'Breathe out…', `Breath ${F.cycle + 1} of ${BREATHS}`, false);
+    if (!inhale && F.half === 0) { F.half = 1; chime('out'); }
+    if (u >= 2 * HALF) {
+      F.cycle++; F.half = 0;
+      if (F.cycle < BREATHS) chime('in');
+      else { F.phase = 'done'; F.t = 0; TOON.b = 0; chime('done'); TOON.joy = FEELING !== 'calm'; feelText('Well done!', 'Big feelings get smaller when we breathe.', true); }
+    }
+  }
+}
+
 /* 123 pages: the animal hops once per number and a counter pops up above it: 1, 2, 3 … */
 let counters = [], countDone = false;
 const countStep = n => n > 10 ? 0.42 : 0.6;
@@ -733,11 +797,13 @@ const HOPPER = ['hop', 'wiggle', 'hop2', 'tilt', 'hop', 'bigspin', 'yawn', 'wigg
 const HANGER = ['swing', 'jingle', 'boing', 'swing'];
 function stepToon(dt, t) {
   const hanging = data.motion === 'swing';
+  if (IS_FEEL) feelFlow(dt);
   // pick the next act after a short "moving hold"
   if (!TOON.act) {
     TOON.rest -= dt;
     TOON.sT = 0.018 * Math.sin(t * 2 * Math.PI * 0.9); TOON.kT = 0.03 * Math.sin(t * 2 * Math.PI * 0.45); TOON.rT = 0;
-    if (data.count && !countDone && !hanging) { countDone = true; TOON.act = { name: 'count', t: 0 }; }
+    if (IS_FEEL && F.phase !== 'done') {}
+    else if (data.count && !countDone && !hanging) { countDone = true; TOON.act = { name: 'count', t: 0 }; }
     else if (TOON.joy && !hanging) { TOON.joy = false; TOON.act = { name: 'joy', t: 0 }; }
     else if (TOON.rest <= 0) {
       const list = hanging ? HANGER : HOPPER; let name;
@@ -772,11 +838,11 @@ function stepToon(dt, t) {
   }
   // compose: pivot at the feet (or the hook for hanging things)
   const P0 = hanging ? new THREE.Vector3(BP.x - B.x, BP.y - B.y, 0) : new THREE.Vector3(0, 0, 0);
-  const sy = Math.max(0.45, 1 + TOON.s), sx = 1 / Math.sqrt(sy);
+  const sy = Math.max(0.45, 1 + TOON.s), sx = 1 / Math.sqrt(sy), g = 1 + 0.16 * TOON.b;   // g: breathing (grows on the in-breath)
   const M = new THREE.Matrix4().makeTranslation(P0.x, P0.y + TOON.h, 0)
     .multiply(new THREE.Matrix4().makeRotationZ(TOON.r))
     .multiply(new THREE.Matrix4().set(1, TOON.k * 0.6, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))   // gentler lean
-    .multiply(new THREE.Matrix4().makeScale(sx * Math.cos(TOON.spin), sy, 1))
+    .multiply(new THREE.Matrix4().makeScale(g * sx * Math.cos(TOON.spin), g * sy, 1))
     .multiply(new THREE.Matrix4().makeTranslation(-P0.x, -P0.y, 0));
   toon.matrix.copy(M); toon.matrixWorldNeedsUpdate = true;
 }
@@ -944,7 +1010,12 @@ async function usePhoto(file) {
 $('photo-btn').addEventListener('click', () => $('file').click());
 $('photo-btn2').addEventListener('click', () => $('file').click());
 $('file').addEventListener('change', e => { const f = e.target.files[0]; if (f) usePhoto(f); e.target.value = ''; });
-$('again').addEventListener('click', () => { hasTexture = false; hideBubble(); setState('scanning'); });
+$('again').addEventListener('click', () => { hasTexture = false; hideBubble(); if (IS_FEEL) resetFeel(); setState('scanning'); });
+if (IS_FEEL) {
+  resetFeel();
+  document.addEventListener('pointerdown', unlockAudio, { capture: true });   // sound can only start after a tap
+  $('feel-again').addEventListener('click', () => { unlockAudio(); Object.assign(F, { phase: 'intro', t: 0, cycle: 0, half: 0 }); TOON.act = null; feelText('Let\'s breathe together', 'Watch me grow and shrink', false); });
+}
 
 /* ---------- recording ---------- */
 let rec = null, chunks = [], recStart = 0, recTimer = null, clipBlob = null, clipType = 'video/webm';
